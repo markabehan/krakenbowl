@@ -226,9 +226,7 @@ function viewStandings(s) {
       <p class="eyebrow">Season ${s.year} &middot; ${s.standings.length} teams</p>
       <h1>${s.inProgress ? 'Standings' : 'Final standings'}</h1>
       <p>Regular season, weeks ${wk[0]}&ndash;${wk[wk.length - 1]}.
-         ${s.source === 'sleeper'
-           ? 'Ranked by win ratio, then points scored.'
-           : 'Ranked by win ratio, then the record among tied teams, then points scored.'}
+         Ranked by win ratio, then the record among tied teams, then points scored.
          ${s.championshipField.length
            ? 'Coaches who reached the championship bracket are marked in amber.'
            : 'The playoff field is not settled yet.'}${wild}</p>

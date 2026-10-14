@@ -188,22 +188,24 @@ def load_support(raw, issues):
 # --------------------------------------------------------------------------
 
 def mini_league(matchups, group):
-    """Win ratio for each coach counting only games against the others.
+    """Wins for each coach counting only games against the others in the tie.
 
     With two teams this is the head-to-head result. With three or more it is
-    the standard generalisation - the record inside the tied group - which is
-    what decides a multi-way tie; comparing pairs cannot, because the pairwise
-    results can form a loop.
+    the record inside the tied group, which is what decides a multi-way tie;
+    comparing pairs cannot, because the pairwise results can form a loop.
+
+    Counted as wins, not win ratio. Teams don't always play each other the same
+    number of times, so the two differ - and where the league's own brackets
+    settle it (2018 and 2025 both had multi-way ties) they follow wins.
     """
-    rec = {c: [0, 0] for c in group}
+    wins = {c: 0 for c in group}
     members = set(group)
     for m in matchups:
         a, b = m["home"], m["away"]
         if {a["coach"], b["coach"]} <= members and a["points"] != b["points"]:
-            win, lose = (a, b) if a["points"] > b["points"] else (b, a)
-            rec[win["coach"]][0] += 1
-            rec[lose["coach"]][1] += 1
-    return {c: (w / (w + l) if (w + l) else 0.0) for c, (w, l) in rec.items()}
+            win = a if a["points"] > b["points"] else b
+            wins[win["coach"]] += 1
+    return wins
 
 
 def standings(teams, matchups, regular_weeks, head_to_head=True):
@@ -406,8 +408,7 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         })
     matchups.sort(key=lambda m: (m["week"], m["home"]["coach"]))
 
-    table = standings(teams, matchups, regular_weeks,
-                      head_to_head=override.get("source") != "sleeper")
+    table = standings(teams, matchups, regular_weeks)
 
     wildcard = None
     if "championshipField" in override:

@@ -89,10 +89,11 @@ What differs in these seasons, and why:
   Bowl field and both winners are taken from `winners_bracket` and
   `losers_bracket` rather than inferred. The build still derives them from the
   scores as a cross-check and warns on any disagreement.
-- **Seeding drops the head-to-head rule.** Sleeper breaks ties on points only,
-  and seeds its brackets that way, so these seasons are sorted the same. Using
-  the old rule here would put a coach at seed 6 who Sleeper left out of the
-  playoffs, and the table would contradict the bracket beside it.
+- **Seeding still follows the league's own rules.** The league tracks seedings
+  by hand and the commissioner sets the brackets manually, so these seasons use
+  the same tiebreak as every other year rather than Sleeper's own (which goes
+  straight to points). The 2025 bracket matches that, which is the check that
+  it is being applied.
 - **No stat lines.** Sleeper's matchup endpoint gives points per player but not
   the "251 Pass Yds, 1 Pass TD" detail the spreadsheet years carry. Box scores
   for these seasons show points only, and say so.
@@ -138,9 +139,15 @@ Set at the top of `build.py` in `PLAYOFF_WEEKS`, `CHAMPIONSHIP_FORMAT` and
 **Seeding.** Win ratio first. Ties are broken by the record among the tied
 teams, then by points scored. For two teams that is a straight head-to-head;
 for three or more it is the record inside the tied group, because pairwise
-results can form a loop and then no pair comparison can order them. This
-matters in practice: 2018 had a three-way tie at 8-6 that only resolves
-correctly this way, and getting it wrong misplaces three playoff seeds.
+results can form a loop and then no pair comparison can order them.
+
+That record is counted in **wins, not win percentage**. Teams don't always meet
+the same number of times inside a tied group, so the two can disagree, and both
+multi-way ties on record follow wins: 2018's three-way tie at 8-6 and 2025's
+four-way tie at 6-8 each produce the bracket that was actually played only when
+counted this way. In 2025 Chris went 2-1 inside the group but played three of
+those games to Dudley's five - by percentage Chris takes the last playoff
+place, by wins Dudley does, and Dudley is who played.
 
 **Playoffs.**
 
