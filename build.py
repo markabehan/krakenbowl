@@ -515,6 +515,7 @@ def build_trades(trades, year):
 def build_index(seasons):
     career = defaultdict(lambda: {
         "coach": "", "seasons": [], "titles": [], "trash": [],
+        "appearances": [],
         "w": 0, "l": 0, "t": 0, "pf": 0.0, "pa": 0.0, "games": 0,
         "pw": 0, "pl": 0})
 
@@ -527,6 +528,10 @@ def build_index(seasons):
                 c[k] += r[k]
             c["pf"] += r["pf"]
             c["pa"] += r["pa"]
+            # An appearance means reaching the championship bracket. The Trash
+            # Bowl is where the teams that missed out go, so it doesn't count.
+            if r["coach"] in s["championshipField"]:
+                c["appearances"].append(s["year"])
             if s["champion"] == r["coach"]:
                 c["titles"].append(s["year"])
             if s["consolationWinner"] == r["coach"]:
@@ -548,6 +553,7 @@ def build_index(seasons):
         c["allL"] = c["l"] + c["pl"]
         allg = c["allW"] + c["allL"] + c["t"]
         c["allPct"] = round((c["allW"] + 0.5 * c["t"]) / allg, 4) if allg else 0
+        c["appearances"].sort()
         c["seasons"].sort()
         rows.append(c)
     rows.sort(key=lambda r: (-r["allPct"], -r["pf"]))

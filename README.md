@@ -111,6 +111,11 @@ final, so the last week doesn't identify a winner on its own. The build checks
 every recorded champion against the bracket anyway and warns on a mismatch —
 all ten currently agree.
 
+**Playoff appearances** on the Overall page count the seasons a coach reached
+the championship bracket, out of the seasons they played. The Trash Bowl is
+where the teams that missed out go, so it isn't an appearance. This is separate
+from the playoff win-loss record, which counts games.
+
 Trash Bowl winners are derived, not listed: within each bracket the final is
 the last game between two teams that haven't yet lost, and its winner takes the
 title. The same rule reproduces all ten championship winners independently,
