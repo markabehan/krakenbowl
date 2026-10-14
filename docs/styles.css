@@ -4,8 +4,8 @@
   --panel-2:#1B2637;
   --line:#26344A;
   --amber:#F2B441;
+  --silver:#AFBACB;
   --mint:#57D6A4;
-  --rust:#E4695B;
   --text:#E8EDF5;
   --muted:#8A99B3;
   --display:"Barlow Condensed",Impact,sans-serif;
@@ -21,7 +21,7 @@ body{
   font-family:var(--body);font-size:15px;line-height:1.55;
   -webkit-font-smoothing:antialiased;
 }
-.wrap{width:min(1100px,100% - 2rem);margin-inline:auto}
+.wrap{width:min(1150px,100% - 2rem);margin-inline:auto}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
 main:focus,main:focus-visible{outline:none}
@@ -35,8 +35,8 @@ main:focus,main:focus-visible{outline:none}
 .masthead .wrap{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;padding:.7rem 0}
 .brand{display:flex;align-items:center;gap:.7rem;text-decoration:none;margin-right:auto}
 .brand-mark{
-  width:13px;height:13px;border-radius:50%;flex:none;
-  background:var(--amber);box-shadow:0 0 0 3px rgba(242,180,65,.16),0 0 14px rgba(242,180,65,.55);
+  width:13px;height:13px;border-radius:50%;flex:none;background:var(--amber);
+  box-shadow:0 0 0 3px rgba(242,180,65,.16),0 0 14px rgba(242,180,65,.55);
 }
 .brand-name{
   display:block;font-family:var(--display);font-weight:700;
@@ -46,53 +46,58 @@ main:focus,main:focus-visible{outline:none}
 
 .mainnav{display:flex;gap:.15rem;flex-wrap:wrap}
 .mainnav a{
-  font-family:var(--display);font-size:1rem;font-weight:600;letter-spacing:.07em;
+  font-family:var(--display);font-size:1.05rem;font-weight:600;letter-spacing:.07em;
   text-transform:uppercase;text-decoration:none;color:var(--muted);
-  padding:.35rem .7rem;border-radius:var(--r);
+  padding:.35rem .8rem;border-radius:var(--r);
 }
 .mainnav a:hover{color:var(--text);background:var(--panel-2)}
 .mainnav a[aria-current]{color:var(--ink);background:var(--amber)}
 
 /* ---------- generic ---------- */
 main{padding:1.6rem 0 3rem;min-height:60vh}
-.loading,.empty{color:var(--muted);padding:2rem 0}
+.loading,.empty{color:var(--muted);padding:1.5rem 0}
 h1,h2,h3{font-family:var(--display);letter-spacing:.03em;margin:0}
 h1{font-size:2.1rem;font-weight:700;text-transform:uppercase;line-height:1.05}
-h2{font-size:1.3rem;font-weight:600;text-transform:uppercase;margin-bottom:.7rem}
+h2{font-size:1.25rem;font-weight:600;text-transform:uppercase;margin-bottom:.7rem}
 .eyebrow{
   font-family:var(--mono);font-size:.7rem;color:var(--amber);
   letter-spacing:.16em;text-transform:uppercase;margin-bottom:.3rem;
 }
-.pagehead{margin-bottom:1.5rem}
-.pagehead p{color:var(--muted);margin:.3rem 0 0;font-size:.87rem}
+.pagehead{margin-bottom:1.4rem}
+.pagehead p{color:var(--muted);margin:.3rem 0 0;font-size:.87rem;max-width:62ch}
 .section{margin-top:2.2rem}
+.foot{border-top:1px solid var(--line);padding:1.2rem 0;color:var(--muted);font-size:.8rem}
+.foot p{margin:0}
 
-/* ---------- season strip ---------- */
-.seasons{
-  display:flex;gap:.3rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:1.4rem;
-  scrollbar-width:thin;
-}
-.seasons a{
-  font-family:var(--display);font-size:1.05rem;font-weight:600;letter-spacing:.05em;
-  text-decoration:none;padding:.3rem .75rem;border:1px solid var(--line);
+/* ---------- pill rows (years, sub-nav, toggles) ---------- */
+.pills{display:flex;gap:.3rem;overflow-x:auto;padding-bottom:.4rem;scrollbar-width:thin}
+.pills a,.pills button{
+  font-family:var(--display);font-size:1rem;font-weight:600;letter-spacing:.05em;
+  text-decoration:none;padding:.3rem .8rem;border:1px solid var(--line);
   border-radius:var(--r);color:var(--muted);white-space:nowrap;background:var(--panel);
+  cursor:pointer;text-transform:uppercase;
 }
-.seasons a:hover{color:var(--text);border-color:var(--muted)}
-.seasons a[aria-current]{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+.pills a:hover,.pills button:hover{color:var(--text);border-color:var(--muted)}
+.pills a[aria-current],.pills button[aria-pressed="true"]{
+  background:var(--amber);color:var(--ink);border-color:var(--amber);
+}
+.years{margin-bottom:.6rem}
+.subnav{margin-bottom:1.3rem}
+.subnav a{font-size:.9rem;letter-spacing:.08em}
 
 /* ---------- tables ---------- */
 .tablecard{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
 .tscroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;min-width:560px}
-th,td{padding:.6rem .7rem;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th,td{padding:.55rem .7rem;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 th{
-  font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+  font-family:var(--mono);font-size:.64rem;letter-spacing:.11em;text-transform:uppercase;
   color:var(--muted);font-weight:500;background:var(--panel-2);position:sticky;top:0;
 }
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:var(--panel-2)}
 .col-name{text-align:left;width:99%}
-td.num{font-family:var(--mono);font-size:.83rem}
+td.num{font-family:var(--mono);font-size:.82rem}
 .rank{
   font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--muted);
   text-align:center;width:2.6rem;
@@ -101,30 +106,44 @@ td.num{font-family:var(--mono);font-size:.83rem}
 .coachname:hover{color:var(--amber)}
 .teamname{display:block;font-size:.76rem;color:var(--muted);font-weight:400}
 .rec{font-family:var(--display);font-size:1.05rem;font-weight:600;letter-spacing:.04em}
+tr.inplayoffs td.rank{color:var(--amber)}
 
-/* ---------- filters ---------- */
-.filters{display:flex;gap:.8rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.2rem}
-.field{display:flex;flex-direction:column;gap:.25rem}
-.field label{
-  font-family:var(--mono);font-size:.65rem;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--muted);
-}
-select{
-  background:var(--panel);color:var(--text);border:1px solid var(--line);
-  border-radius:var(--r);padding:.45rem .6rem;font-family:var(--body);font-size:.9rem;min-width:9.5rem;
-}
-.count{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:auto}
+/* trophy dots */
+.dots{text-align:center;letter-spacing:.12em;font-size:.72rem;white-space:nowrap}
+.dot-g,.dot-s{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 1px}
+.dot-g{background:var(--amber);box-shadow:0 0 7px rgba(242,180,65,.55)}
+.dot-s{background:var(--silver)}
 
-/* ---------- matchup list ---------- */
+/* ---------- stat strip ---------- */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.5rem;margin-bottom:1.4rem}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .85rem}
+.stat .k{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--display);font-size:1.65rem;font-weight:700;line-height:1.15;margin-top:.1rem}
+.stat .s{font-size:.74rem;color:var(--muted)}
+
+/* ---------- roll of honour ---------- */
+.honours{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.45rem}
+.honour{
+  display:block;text-decoration:none;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r);padding:.65rem .75rem;
+}
+.honour:hover{border-color:var(--amber)}
+.honour .hy{font-family:var(--mono);font-size:.64rem;letter-spacing:.13em;color:var(--muted)}
+.honour .row{display:flex;align-items:center;gap:.4rem;margin-top:.2rem}
+.honour .hc{font-family:var(--display);font-size:1.2rem;font-weight:700;letter-spacing:.03em}
+.honour .ht{font-size:.76rem;color:var(--muted);display:flex;align-items:center;gap:.35rem;margin-top:.15rem}
+
+/* ---------- matchups ---------- */
 .weekhead{
-  display:flex;align-items:baseline;gap:.6rem;margin:1.6rem 0 .6rem;
+  display:flex;align-items:baseline;gap:.6rem;margin:1.5rem 0 .55rem;
   font-family:var(--display);font-size:1.1rem;font-weight:600;
   letter-spacing:.09em;text-transform:uppercase;
 }
-.weekhead .tag{
-  font-family:var(--mono);font-size:.6rem;letter-spacing:.13em;padding:.15rem .45rem;
-  border-radius:3px;background:rgba(242,180,65,.14);color:var(--amber);
+.tag{
+  font-family:var(--mono);font-size:.58rem;letter-spacing:.13em;padding:.15rem .45rem;
+  border-radius:3px;background:rgba(242,180,65,.14);color:var(--amber);text-transform:uppercase;
 }
+.tag.silver{background:rgba(175,186,203,.14);color:var(--silver)}
 .mlist{display:grid;gap:.4rem}
 .mrow{
   display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.6rem;
@@ -132,44 +151,39 @@ select{
   padding:.6rem .85rem;text-decoration:none;
 }
 .mrow:hover{border-color:var(--amber)}
+.mrow.cons:hover{border-color:var(--silver)}
 .side{min-width:0}
 .side.r{text-align:right}
 .side .nm{font-weight:600;font-size:.95rem}
-.side .tm{
-  font-size:.74rem;color:var(--muted);overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;
-}
+.side .tm{font-size:.74rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .sd{font-family:var(--mono);font-size:.62rem;color:var(--muted);margin-right:.3rem}
+.side.r .sd{margin:0 0 0 .3rem}
 .side.win .nm{color:var(--mint)}
-.score{
-  font-family:var(--display);font-size:1.35rem;font-weight:700;letter-spacing:.03em;
-  display:flex;align-items:center;gap:.5rem;
-}
+.score{font-family:var(--display);font-size:1.35rem;font-weight:700;letter-spacing:.03em;display:flex;align-items:center;gap:.5rem}
 .score .v{min-width:3.6rem;text-align:center}
 .score .dash{color:var(--line)}
 .score .v.win{color:var(--mint)}
+.finaltag{
+  display:block;text-align:center;font-family:var(--mono);font-size:.56rem;
+  letter-spacing:.14em;color:var(--amber);text-transform:uppercase;margin-top:.15rem;
+}
+.finaltag.silver{color:var(--silver)}
 
 /* ---------- box score ---------- */
 .boxhead{
   display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:center;
   background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
-  padding:1.1rem 1rem;margin-bottom:1.4rem;
+  padding:1.1rem 1rem;margin-bottom:1.3rem;
 }
 .boxhead .nm{font-family:var(--display);font-size:1.5rem;font-weight:700;letter-spacing:.04em}
 .boxhead .tm{font-size:.8rem;color:var(--muted)}
 .boxhead .r{text-align:right}
 .boxhead .total{font-family:var(--display);font-size:2.5rem;font-weight:700;line-height:1}
 .boxhead .total.win{color:var(--mint)}
-.vs{
-  font-family:var(--mono);font-size:.65rem;letter-spacing:.16em;
-  color:var(--muted);text-align:center;
-}
+.vs{font-family:var(--mono);font-size:.65rem;letter-spacing:.16em;color:var(--muted);text-align:center}
 
-/* the slot ladder: both lineups facing each other, slot by slot */
 .ladder{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
-.rung{
-  display:grid;grid-template-columns:1fr 4.4rem 1fr;
-  border-bottom:1px solid var(--line);
-}
+.rung{display:grid;grid-template-columns:1fr 4.4rem 1fr;border-bottom:1px solid var(--line)}
 .ladder .rung:last-child{border-bottom:none}
 .rung.bench{background:rgba(0,0,0,.16)}
 .rung.bench .p-nm,.rung.bench .p-pts{color:var(--muted);font-weight:500}
@@ -179,9 +193,8 @@ select{
   border-top:1px solid var(--line);border-bottom:1px solid var(--line);
 }
 .slotlabel{
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.1rem;
-  background:var(--panel-2);font-family:var(--mono);font-size:.65rem;
-  letter-spacing:.1em;color:var(--muted);padding:.5rem .2rem;
+  display:flex;align-items:center;justify-content:center;background:var(--panel-2);
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;color:var(--muted);padding:.5rem .2rem;
 }
 .pl{padding:.55rem .8rem;min-width:0;display:flex;gap:.7rem;align-items:baseline}
 .pl.r{flex-direction:row-reverse;text-align:right}
@@ -194,14 +207,8 @@ select{
 .pl.r .p-pts{text-align:left}
 .p-pts.top{color:var(--amber)}
 .p-none{color:var(--line);font-style:italic;font-weight:400}
-
-.legend{
-  display:flex;gap:1.1rem;flex-wrap:wrap;margin-top:.8rem;
-  font-family:var(--mono);font-size:.68rem;color:var(--muted);
-}
+.legend{display:flex;gap:1.1rem;flex-wrap:wrap;margin-top:.8rem;font-family:var(--mono);font-size:.68rem;color:var(--muted)}
 .legend .k{display:inline-flex;align-items:center;gap:.35rem}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--amber)}
-.dot.bench{background:var(--line)}
 
 .backlink{
   display:inline-block;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;
@@ -209,26 +216,84 @@ select{
 }
 .backlink:hover{color:var(--amber)}
 
-/* ---------- stat strip ---------- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;margin-bottom:1.5rem}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .85rem}
-.stat .k{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
-.stat .v{font-family:var(--display);font-size:1.65rem;font-weight:700;line-height:1.15;margin-top:.1rem}
-.stat .s{font-size:.74rem;color:var(--muted)}
+/* ---------- filters ---------- */
+.filters{display:flex;gap:.8rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem}
+.field{display:flex;flex-direction:column;gap:.25rem}
+.field label{font-family:var(--mono);font-size:.63rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+select{
+  background:var(--panel);color:var(--text);border:1px solid var(--line);
+  border-radius:var(--r);padding:.42rem .6rem;font-family:var(--body);font-size:.88rem;min-width:9.5rem;
+}
+.count{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:auto}
+
+/* ---------- champion banner ---------- */
+.champbar{
+  display:flex;align-items:center;gap:1.3rem;flex-wrap:wrap;margin-bottom:1.3rem;
+  background:linear-gradient(90deg,rgba(242,180,65,.15),rgba(242,180,65,0));
+  border-left:3px solid var(--amber);border-radius:0 var(--r) var(--r) 0;padding:.7rem .9rem;
+}
+.champbar .item{display:flex;align-items:center;gap:.5rem;font-size:.92rem}
+.champbar .lbl{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.champbar .who{font-family:var(--display);font-size:1.15rem;font-weight:700;letter-spacing:.03em}
+
+/* ---------- draft board ---------- */
+.board{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.board table{min-width:900px}
+.board th{text-align:left}
+.board td{text-align:left;vertical-align:top;padding:.45rem .55rem;border-right:1px solid var(--line)}
+.board td:last-child{border-right:none}
+.board .rnd{
+  font-family:var(--display);font-size:1rem;font-weight:700;color:var(--muted);
+  text-align:center;background:var(--panel-2);width:2.4rem;
+}
+.pk{font-family:var(--mono);font-size:.58rem;color:var(--muted)}
+.pnm{font-size:.82rem;font-weight:500;line-height:1.25}
+.ppos{font-family:var(--mono);font-size:.58rem;color:var(--muted)}
+.pos-QB{border-left:2px solid #E4695B;padding-left:.4rem}
+.pos-RB{border-left:2px solid #57D6A4;padding-left:.4rem}
+.pos-WR{border-left:2px solid #4FA3E3;padding-left:.4rem}
+.pos-TE{border-left:2px solid #F2B441;padding-left:.4rem}
+.pos-K{border-left:2px solid #9B8BD6;padding-left:.4rem}
+.pos-DEF{border-left:2px solid #7E8CA3;padding-left:.4rem}
+
+/* ---------- trades ---------- */
+.trades{display:grid;gap:.6rem}
+.trade{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.8rem .9rem}
+.trade .thead{
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.55rem;
+  font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+}
+.trade .pair{font-family:var(--display);font-size:1.1rem;font-weight:700;letter-spacing:.03em;color:var(--text);text-transform:none}
+.tmove{display:flex;align-items:baseline;gap:.5rem;padding:.25rem 0;font-size:.88rem;border-top:1px solid var(--line)}
+.tmove:first-of-type{border-top:none}
+.tmove .arrow{font-family:var(--mono);font-size:.7rem;color:var(--amber)}
+.tmove .who{font-family:var(--mono);font-size:.68rem;color:var(--muted);white-space:nowrap}
+.tmove .pl2{font-weight:500}
+.tmove .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted)}
+
+/* ---------- moves ---------- */
+.movelist{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.mv{display:grid;grid-template-columns:3.3rem 1fr auto;gap:.6rem;align-items:center;
+  padding:.4rem .75rem;border-bottom:1px solid var(--line);font-size:.86rem}
+.movelist .mv:last-child{border-bottom:none}
+.mv .kind{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;text-align:center;
+  padding:.1rem .3rem;border-radius:3px}
+.mv .kind.add{background:rgba(87,214,164,.15);color:var(--mint)}
+.mv .kind.drop{background:rgba(228,105,91,.15);color:#E4695B}
+.mv .meta{font-family:var(--mono);font-size:.64rem;color:var(--muted)}
+.mv .who{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-align:right}
 
 @media (max-width:640px){
   h1{font-size:1.6rem}
   .boxhead{grid-template-columns:1fr auto;gap:.4rem .8rem;padding:.85rem}
   .boxhead .nm{font-size:1.15rem}
   .boxhead .tm{font-size:.72rem}
-  .boxhead>div{display:grid;grid-template-columns:1fr auto;align-items:center;
-    column-gap:.8rem;grid-column:1/-1}
+  .boxhead>div{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:.8rem;grid-column:1/-1}
   .boxhead>div .total{grid-row:span 2;font-size:1.7rem}
   .boxhead .r{text-align:left}
   .vs{grid-column:1/-1;text-align:left;border-top:1px solid var(--line);padding-top:.4rem}
   .vs br{display:none}
   .brand-name{font-size:1.15rem}
-  .brand-sub{font-size:.66rem}
   .masthead .wrap{padding:.55rem 0}
   .rung{grid-template-columns:1fr 3.4rem 1fr}
   .pl{padding:.5rem .5rem;gap:.4rem}
@@ -238,37 +303,30 @@ select{
   .score{font-size:1.1rem}
   .score .v{min-width:2.9rem}
   .count{width:100%;margin-left:0}
+  .mv{grid-template-columns:3rem 1fr;row-gap:.1rem}
+  .mv .who{grid-column:2;text-align:left}
 }
 
 @media (prefers-reduced-motion:no-preference){
-  .mrow{transition:border-color .15s ease}
-  .mainnav a,.seasons a{transition:background .15s ease,color .15s ease}
+  .mrow,.honour{transition:border-color .15s ease}
+  .mainnav a,.pills a,.pills button{transition:background .15s ease,color .15s ease}
 }
 
-/* champions */
-.titles{color:var(--amber);letter-spacing:.15em;font-size:.7rem;text-align:center}
-.champbar{
-  display:flex;align-items:center;gap:.7rem;margin-bottom:1.2rem;
-  background:linear-gradient(90deg,rgba(242,180,65,.16),rgba(242,180,65,0));
-  border-left:3px solid var(--amber);border-radius:0 var(--r) var(--r) 0;
-  padding:.7rem .9rem;font-size:.95rem;
+/* playoff appearances */
+.apps{font-family:var(--mono);font-size:.82rem;white-space:nowrap}
+.apps .of,.stat .of{color:var(--muted);font-size:.78em}
+.stat .of{font-family:var(--display)}
+
+/* season in progress */
+.champbar.live{
+  background:linear-gradient(90deg,rgba(87,214,164,.14),rgba(87,214,164,0));
+  border-left-color:var(--mint);
 }
-.champbar .trophy{
-  width:9px;height:9px;border-radius:50%;background:var(--amber);flex:none;
-  box-shadow:0 0 10px rgba(242,180,65,.7);
+.pulse{
+  width:9px;height:9px;border-radius:50%;background:var(--mint);flex:none;
+  box-shadow:0 0 0 3px rgba(87,214,164,.16);
 }
-.champbar .ct{color:var(--muted);font-size:.82rem;margin-left:.3rem}
-.honours{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.4rem}
-.honour{
-  display:block;text-decoration:none;background:var(--panel);
-  border:1px solid var(--line);border-radius:var(--r);padding:.6rem .7rem;
-}
-.honour:hover{border-color:var(--amber)}
-.honour .hy{
-  display:block;font-family:var(--mono);font-size:.65rem;
-  letter-spacing:.13em;color:var(--muted);
-}
-.honour .hc{
-  display:block;font-family:var(--display);font-size:1.2rem;font-weight:700;
-  letter-spacing:.03em;margin-top:.1rem;
+@media (prefers-reduced-motion:no-preference){
+  .pulse{animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 }
