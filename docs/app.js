@@ -93,6 +93,7 @@ function renderOverall(params) {
             &middot; ${r.seasons[0]}&ndash;${r.seasons[r.seasons.length - 1]}</span>
         </td>
         <td class="dots">${dots(r.titles.length, r.trash.length)}</td>
+        <td class="num apps">${r.appearances.length}<span class="of">/${r.seasons.length}</span></td>
         <td class="rec">${played ? `${r[M.w]}-${r[M.l]}` : '&mdash;'}</td>
         <td class="num">${played ? pct(r[M.p]) : '&mdash;'}</td>
         <td class="num">${pts(r.pf)}</td>
@@ -122,7 +123,10 @@ function renderOverall(params) {
     <div class="pagehead">
       <p class="eyebrow">${first}&ndash;${latestYear()}</p>
       <h1>The all-time record</h1>
-      <p>${M.note} Ranked by win percentage, then points scored.</p>
+      <p>${M.note} Ranked by win percentage, then points scored.
+         Playoffs made counts the seasons a coach reached the championship
+         bracket, out of the seasons they played &mdash; the Trash Bowl doesn't
+         count.</p>
     </div>
     <div class="stats">
       <div class="stat"><div class="k">Seasons</div><div class="v">${INDEX.seasons.length}</div></div>
@@ -134,7 +138,7 @@ function renderOverall(params) {
     <div class="tablecard"><div class="tscroll"><table>
       <thead><tr>
         <th class="rank">#</th><th class="col-name">Coach</th><th>Honours</th>
-        <th>${esc(M.label)}</th><th>Win&nbsp;%</th>
+        <th>Playoffs&nbsp;made</th><th>${esc(M.label)}</th><th>Win&nbsp;%</th>
         <th>Points&nbsp;for</th><th>Per&nbsp;game</th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -601,8 +605,11 @@ async function renderCoach(name) {
     <div class="stats">
       <div class="stat"><div class="k">Regular season</div><div class="v">${career.w}-${career.l}</div>
         <div class="s">${pct(career.pct)}</div></div>
-      <div class="stat"><div class="k">Playoffs</div><div class="v">${career.pw}-${career.pl}</div>
-        <div class="s">${career.pw + career.pl ? pct(career.ppct) : 'never qualified'}</div></div>
+      <div class="stat"><div class="k">Playoffs made</div>
+        <div class="v">${career.appearances.length}<span class="of">/${career.seasons.length}</span></div>
+        <div class="s">${career.appearances.length ? career.appearances.join(', ') : 'never qualified'}</div></div>
+      <div class="stat"><div class="k">Playoff record</div><div class="v">${career.pw}-${career.pl}</div>
+        <div class="s">${career.pw + career.pl ? pct(career.ppct) : 'no games'}</div></div>
       <div class="stat"><div class="k">Points per game</div><div class="v">${pts(career.ppg)}</div>
         <div class="s">${Math.round(career.pf).toLocaleString()} total</div></div>
       <div class="stat"><div class="k">Best finish</div><div class="v">${ord(best.r.rank)}</div>

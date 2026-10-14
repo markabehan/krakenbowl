@@ -311,3 +311,8 @@ select{
   .mrow,.honour{transition:border-color .15s ease}
   .mainnav a,.pills a,.pills button{transition:background .15s ease,color .15s ease}
 }
+
+/* playoff appearances */
+.apps{font-family:var(--mono);font-size:.82rem;white-space:nowrap}
+.apps .of,.stat .of{color:var(--muted);font-size:.78em}
+.stat .of{font-family:var(--display)}
