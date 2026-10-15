@@ -21,6 +21,32 @@ function dots(golds, silvers) {
        + '<span class="dot-s"></span>'.repeat(silvers);
 }
 
+/* Heat map shading for a table column: blue where a value helps, red where
+   it hurts, by distance from `mid` (the column average unless given), on four
+   steps each way. `dir` is which way is good: 1 = higher, -1 = lower.
+   Returns the scale's midpoint and a function from value to class string;
+   null values (no games) stay unshaded. `fit`, if given, is the subset the
+   midpoint and range are set from; anything beyond that range takes the
+   strongest step. */
+function heatScale(values, dir, mid, fit = values) {
+  const vs = fit.filter(v => v !== null);
+  if (mid === undefined || mid === null) mid = vs.reduce((x, y) => x + y, 0) / (vs.length || 1);
+  const max = Math.max(0, ...vs.map(v => Math.abs(v - mid))) || 1;
+  const cls = v => {
+    if (v === null) return '';
+    const t = (v - mid) * dir / max, a = Math.min(Math.abs(t), 1);
+    const step = a < 0.15 ? 0 : a < 0.4 ? 1 : a < 0.65 ? 2 : a < 0.9 ? 3 : 4;
+    return step ? ` heat-${t > 0 ? 'up' : 'down'}${step}` : '';
+  };
+  return { mid, cls };
+}
+
+const HEAT_KEY = `<span class="k heatkey">Hurts
+  <span class="heat-down4"></span><span class="heat-down3"></span><span class="heat-down2"></span><span class="heat-down1"></span>
+  <span class="mid"></span>
+  <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
+  Helps</span>`;
+
 async function getSeason(year) {
   if (!seasonCache.has(year)) {
     const res = await fetch(`data/season-${year}.json`);
@@ -84,6 +110,20 @@ function renderOverall(params) {
   const mode = MODES[params.get('mode')] ? params.get('mode') : 'all';
   const M = MODES[mode];
 
+  // Heat map on the columns that compare like with like. Win % is centred on
+  // .500; playoffs made (as a share of completed seasons) and points per game
+  // on the league average. Points for is a career total, so it isn't shaded -
+  // it mostly measures how long someone has played. The scales are set from
+  // coaches with three or more seasons, so a two-season career at either
+  // extreme doesn't wash out everyone else; it just takes the strongest shade.
+  const appRate = r => r.completed ? r.appearances.length / r.completed : null;
+  const has = r => r[M.w] + r[M.l] > 0;
+  const regulars = INDEX.career.filter(r => r.seasons.length >= 3);
+  const scaleOf = (f, mid) => heatScale(INDEX.career.map(f), 1, mid, regulars.map(f));
+  const heatApps = scaleOf(appRate);
+  const heatPct = scaleOf(r => has(r) ? r[M.p] : null, 0.5);
+  const heatPpg = scaleOf(r => r[M.g] ? r[M.ppg] : null);
+
   const rows = [...INDEX.career]
     .sort((a, b) => (b[M.p] - a[M.p]) || (b[M.pf] - a[M.pf]))
     .map((r, i) => {
@@ -96,11 +136,11 @@ function renderOverall(params) {
             &middot; ${r.seasons[0]}&ndash;${r.seasons[r.seasons.length - 1]}</span>
         </td>
         <td class="dots">${dots(r.titles.length, r.trash.length)}</td>
-        <td class="num apps">${r.appearances.length}<span class="of">/${r.completed}</span></td>
+        <td class="num apps${heatApps.cls(appRate(r))}">${r.appearances.length}<span class="of">/${r.completed}</span></td>
         <td class="rec">${played ? `${r[M.w]}-${r[M.l]}` : '&mdash;'}</td>
-        <td class="num">${played ? pct(r[M.p]) : '&mdash;'}</td>
+        <td class="num${heatPct.cls(has(r) ? r[M.p] : null)}">${played ? pct(r[M.p]) : '&mdash;'}</td>
         <td class="num">${r[M.g] ? pts(r[M.pf]) : '&mdash;'}</td>
-        <td class="num">${r[M.g] ? pts(r[M.ppg]) : '&mdash;'}</td>
+        <td class="num${heatPpg.cls(r[M.g] ? r[M.ppg] : null)}">${r[M.g] ? pts(r[M.ppg]) : '&mdash;'}</td>
       </tr>`;
     }).join('');
 
@@ -167,6 +207,9 @@ function renderOverall(params) {
     <div class="legend">
       <span class="k"><span class="dot-g"></span> Championship</span>
       <span class="k"><span class="dot-s"></span> Trash Bowl</span>
+      ${HEAT_KEY}
+      <span class="k">Win % is shaded against .500, playoffs made and per game
+        against the average; the scale is set by coaches with three or more seasons</span>
     </div>
     <div class="section">
       <h2>Head to head</h2>
@@ -426,20 +469,13 @@ function viewPower(s) {
   // where it helps the team and red where it hurts. `dir` is which way is
   // good - lower is better for consistency (steadier) and schedule strength.
   const HEAT = { ppg: 1, consistency: -1, breakdown: 1, sos: -1, ros: -1, fortune: 1 };
-  const spread = {};
-  for (const k of Object.keys(HEAT)) {
-    const vals = s.power.map(r => r[k]);
-    const mid = vals.reduce((x, y) => x + y, 0) / vals.length;
-    spread[k] = { mid, max: Math.max(...vals.map(v => Math.abs(v - mid))) || 1 };
-  }
+  const scale = {};
+  for (const [k, dir] of Object.entries(HEAT)) scale[k] = heatScale(s.power.map(r => r[k]), dir);
   const heat = (r, k, text) => {
-    const { mid, max } = spread[k];
-    const t = (r[k] - mid) * HEAT[k] / max;
-    const step = Math.abs(t) < 0.15 ? 0 : Math.abs(t) < 0.4 ? 1 : Math.abs(t) < 0.65 ? 2 : Math.abs(t) < 0.9 ? 3 : 4;
-    const cls = step ? ` heat-${t > 0 ? 'up' : 'down'}${step}` : '';
-    const diff = r[k] - mid;
+    const cls = scale[k].cls(r[k]);
+    const diff = r[k] - scale[k].mid;
     const tip = `${diff >= 0 ? '+' : ''}${diff.toFixed(k === 'sos' || k === 'ros' || k === 'fortune' ? 0 : 1)} vs average`
-      + (step ? (t > 0 ? ', helps' : ', hurts') : '');
+      + (cls ? (cls.includes('up') ? ', helps' : ', hurts') : '');
     return `<td class="num${cls}" title="${tip}">${text}</td>`;
   };
   const cells = r => `
@@ -481,11 +517,7 @@ function viewPower(s) {
         ${ros ? `<td class="num">${a.ros}</td>` : ''}<td class="num">${a.fortune}</td></tr></tfoot>
     </table></div></div>
     <div class="legend">
-      <span class="k heatkey">Hurts
-        <span class="heat-down4"></span><span class="heat-down3"></span><span class="heat-down2"></span><span class="heat-down1"></span>
-        <span class="mid"></span>
-        <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
-        Helps</span>
+      ${HEAT_KEY}
       <span class="k">Shaded by distance from the league average in each column. Lower consistency
         and SoS help: steadier scoring and easier opponents.</span>
     </div>
