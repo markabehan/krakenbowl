@@ -193,7 +193,10 @@ all ten currently agree.
 **Playoff appearances** on the Overall page count the seasons a coach reached
 the championship bracket, out of the seasons they played. The Trash Bowl is
 where the teams that missed out go, so it isn't an appearance. This is separate
-from the playoff win-loss record, which counts games.
+from the playoff win-loss record, which counts games. The playoff record,
+points and head to head count championship bracket games only, placing games
+included; Trash Bowl games count nowhere on the Overall page, so Combined is
+the regular season plus the championship bracket.
 
 Trash Bowl winners are derived, not listed: within each bracket the final is
 the last game between two teams that haven't yet lost, and its winner takes the

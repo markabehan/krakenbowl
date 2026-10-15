@@ -653,10 +653,11 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         elif cons_final and m["id"] == cons_final["id"]:
             m["title"] = "Trash Bowl final"
 
-    # playoff record per coach, for the career table
+    # playoff record per coach, for the career table. Championship bracket
+    # games only - the Trash Bowl isn't the playoffs.
     po = defaultdict(lambda: {"w": 0, "l": 0})
     for m in matchups:
-        if m["round"] not in ("championship", "consolation", "crossover"):
+        if m["round"] != "championship":
             continue
         a, b = m["home"], m["away"]
         if a["points"] == b["points"]:
@@ -777,7 +778,7 @@ def build_index(seasons):
         "coach": "", "seasons": [], "titles": [], "trash": [],
         "appearances": [], "completed": 0,
         "w": 0, "l": 0, "t": 0, "pf": 0.0, "pa": 0.0, "games": 0,
-        "pw": 0, "pl": 0})
+        "pw": 0, "pl": 0, "ppf": 0.0, "pgames": 0})
 
     for s in sorted(seasons.values(), key=lambda x: x["year"]):
         for r in s["standings"]:
@@ -806,13 +807,19 @@ def build_index(seasons):
                 c["pl"] += po["l"]
 
     # Every pairing's record, from the first coach's side:
-    # [regular W, L, T, playoff W, L, T]. Playoffs means any bracket game,
-    # Trash Bowl included, as in the career playoff record.
+    # [regular W, L, T, playoff W, L, T]. Playoffs means championship bracket
+    # games, as in the career playoff record; Trash Bowl games count nowhere.
+    # The playoff points ride along: the standings only hold the regular season.
     h2h = defaultdict(lambda: defaultdict(lambda: [0] * 6))
     for s in seasons.values():
         for m in s["matchups"]:
+            if m["round"] not in ("regular", "championship"):
+                continue
             off = 0 if m["round"] == "regular" else 3
             for me, them in ((m["home"], m["away"]), (m["away"], m["home"])):
+                if off:
+                    career[me["coach"]]["ppf"] += me["points"]
+                    career[me["coach"]]["pgames"] += 1
                 r = h2h[me["coach"]][them["coach"]]
                 if me["points"] > them["points"]:
                     r[off] += 1
@@ -826,6 +833,11 @@ def build_index(seasons):
         c["pf"] = round(c["pf"], 2)
         c["pa"] = round(c["pa"], 2)
         c["ppg"] = round(c["pf"] / c["games"], 2) if c["games"] else 0
+        c["ppf"] = round(c["ppf"], 2)
+        c["pppg"] = round(c["ppf"] / c["pgames"], 2) if c["pgames"] else 0
+        c["allPf"] = round(c["pf"] + c["ppf"], 2)
+        c["allGames"] = c["games"] + c["pgames"]
+        c["allPpg"] = round(c["allPf"] / c["allGames"], 2) if c["allGames"] else 0
         c["pct"] = round((c["w"] + 0.5 * c["t"]) / c["games"], 4) if c["games"] else 0
         tot = c["pw"] + c["pl"]
         c["ppct"] = round(c["pw"] / tot, 4) if tot else 0

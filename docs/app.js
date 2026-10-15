@@ -69,11 +69,14 @@ async function router() {
 
 const MODES = {
   all: { label: 'Combined', w: 'allW', l: 'allL', p: 'allPct',
+         pf: 'allPf', ppg: 'allPpg', g: 'allGames',
          note: 'Regular season and playoffs together.' },
   regular: { label: 'Regular season', w: 'w', l: 'l', p: 'pct',
+             pf: 'pf', ppg: 'ppg', g: 'games',
              note: 'Regular season only.' },
   playoffs: { label: 'Playoffs', w: 'pw', l: 'pl', p: 'ppct',
-              note: 'Championship and Trash Bowl games only.' },
+              pf: 'ppf', ppg: 'pppg', g: 'pgames',
+              note: 'Championship bracket games only; the Trash Bowl doesn\'t count.' },
 };
 
 function renderOverall(params) {
@@ -82,7 +85,7 @@ function renderOverall(params) {
   const M = MODES[mode];
 
   const rows = [...INDEX.career]
-    .sort((a, b) => (b[M.p] - a[M.p]) || (b.pf - a.pf))
+    .sort((a, b) => (b[M.p] - a[M.p]) || (b[M.pf] - a[M.pf]))
     .map((r, i) => {
       const played = r[M.w] + r[M.l];
       return `<tr>
@@ -96,14 +99,14 @@ function renderOverall(params) {
         <td class="num apps">${r.appearances.length}<span class="of">/${r.completed}</span></td>
         <td class="rec">${played ? `${r[M.w]}-${r[M.l]}` : '&mdash;'}</td>
         <td class="num">${played ? pct(r[M.p]) : '&mdash;'}</td>
-        <td class="num">${pts(r.pf)}</td>
-        <td class="num">${pts(r.ppg)}</td>
+        <td class="num">${r[M.g] ? pts(r[M.pf]) : '&mdash;'}</td>
+        <td class="num">${r[M.g] ? pts(r[M.ppg]) : '&mdash;'}</td>
       </tr>`;
     }).join('');
 
   // Head to head, rows read against columns, in the same order as the table.
   const order = [...INDEX.career]
-    .sort((a, b) => (b[M.p] - a[M.p]) || (b.pf - a.pf)).map(r => r.coach);
+    .sort((a, b) => (b[M.p] - a[M.p]) || (b[M.pf] - a[M.pf])).map(r => r.coach);
   const pick = r => mode === 'regular' ? r.slice(0, 3)
     : mode === 'playoffs' ? r.slice(3)
     : [r[0] + r[3], r[1] + r[4], r[2] + r[5]];
@@ -123,8 +126,8 @@ function renderOverall(params) {
     `<a href="#/?mode=${k}"${k === mode ? ' aria-current="true"' : ''}>${v.label}</a>`
   ).join('');
 
-  const games = INDEX.career.reduce((a, r) => a + r.games, 0) / 2;
-  const points = INDEX.career.reduce((a, r) => a + r.pf, 0);
+  const games = INDEX.career.reduce((a, r) => a + r[M.g], 0) / 2;
+  const points = INDEX.career.reduce((a, r) => a + r[M.pf], 0);
   const first = INDEX.seasons[0].year;
 
   const honours = INDEX.seasons.map(s => `
