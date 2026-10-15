@@ -101,6 +101,24 @@ function renderOverall(params) {
       </tr>`;
     }).join('');
 
+  // Head to head, rows read against columns, in the same order as the table.
+  const order = [...INDEX.career]
+    .sort((a, b) => (b[M.p] - a[M.p]) || (b.pf - a.pf)).map(r => r.coach);
+  const pick = r => mode === 'regular' ? r.slice(0, 3)
+    : mode === 'playoffs' ? r.slice(3)
+    : [r[0] + r[3], r[1] + r[4], r[2] + r[5]];
+  const h2hCell = (me, them) => {
+    if (me === them) return '<td class="self"></td>';
+    const r = INDEX.h2h[me] && INDEX.h2h[me][them];
+    const [w, l, t] = r ? pick(r) : [0, 0, 0];
+    if (!w && !l && !t) return '<td class="none">&middot;</td>';
+    const cls = w > l ? 'up' : w < l ? 'down' : 'even';
+    return `<td class="${cls}" title="${esc(me)} v ${esc(them)}: ${w}-${l}${t ? '-' + t : ''}">${w}-${l}${t ? '-' + t : ''}</td>`;
+  };
+  const h2hRows = order.map(me => `<tr>
+    <th class="rowhead"><a class="coachname" href="#/coach/${slug(me)}">${esc(me)}</a></th>
+    ${order.map(them => h2hCell(me, them)).join('')}</tr>`).join('');
+
   const toggle = Object.entries(MODES).map(([k, v]) =>
     `<a href="#/?mode=${k}"${k === mode ? ' aria-current="true"' : ''}>${v.label}</a>`
   ).join('');
@@ -146,6 +164,15 @@ function renderOverall(params) {
     <div class="legend">
       <span class="k"><span class="dot-g"></span> Championship</span>
       <span class="k"><span class="dot-s"></span> Trash Bowl</span>
+    </div>
+    <div class="section">
+      <h2>Head to head</h2>
+      <p class="sectnote">Each row's record against each column, ${esc(M.label.toLowerCase())}
+        ${mode === 'all' ? '' : 'only'}. Green is a winning record, red a losing one.</p>
+      <div class="tablecard"><div class="tscroll"><table class="h2h">
+        <thead><tr><th class="rowhead"></th>${order.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${h2hRows}</tbody>
+      </table></div></div>
     </div>
     <div class="section">
       <h2>Roll of honour</h2>

@@ -805,6 +805,22 @@ def build_index(seasons):
                 c["pw"] += po["w"]
                 c["pl"] += po["l"]
 
+    # Every pairing's record, from the first coach's side:
+    # [regular W, L, T, playoff W, L, T]. Playoffs means any bracket game,
+    # Trash Bowl included, as in the career playoff record.
+    h2h = defaultdict(lambda: defaultdict(lambda: [0] * 6))
+    for s in seasons.values():
+        for m in s["matchups"]:
+            off = 0 if m["round"] == "regular" else 3
+            for me, them in ((m["home"], m["away"]), (m["away"], m["home"])):
+                r = h2h[me["coach"]][them["coach"]]
+                if me["points"] > them["points"]:
+                    r[off] += 1
+                elif me["points"] < them["points"]:
+                    r[off + 1] += 1
+                else:
+                    r[off + 2] += 1
+
     rows = []
     for c in career.values():
         c["pf"] = round(c["pf"], 2)
@@ -836,6 +852,7 @@ def build_index(seasons):
         } for s in sorted(seasons.values(), key=lambda x: x["year"])],
         "career": rows,
         "coaches": sorted(career.keys()),
+        "h2h": {c: dict(opps) for c, opps in h2h.items()},
     }
 
 

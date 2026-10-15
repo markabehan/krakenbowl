@@ -351,3 +351,18 @@ td.res.l{color:#E4695B}
 .mrow.proj:hover{border-color:var(--line)}
 .byes{color:var(--muted);font-size:.85rem;margin:0 0 .6rem}
 .byes strong{color:var(--text)}
+
+/* head to head grid */
+.sectnote{color:var(--muted);font-size:.85rem;margin:-.3rem 0 .8rem;max-width:62ch}
+table.h2h{min-width:760px}
+.h2h th,.h2h td{text-align:center;padding:.45rem .4rem}
+.h2h thead th{font-size:.6rem;letter-spacing:.06em}
+.h2h td{font-family:var(--display);font-size:1rem;font-weight:600;letter-spacing:.03em}
+.h2h .rowhead{text-align:left;position:sticky;left:0;z-index:1;background:var(--panel-2);
+  font-family:var(--body);font-size:.88rem;letter-spacing:0;text-transform:none;color:var(--text)}
+.h2h td.up{color:var(--mint);background:rgba(87,214,164,.07)}
+.h2h td.down{color:#E4695B;background:rgba(228,105,91,.07)}
+.h2h td.even{color:var(--text)}
+.h2h td.none{color:var(--line)}
+.h2h td.self{background:var(--panel-2)}
+.h2h tbody tr:hover td:not(.self){box-shadow:inset 0 0 0 999px rgba(255,255,255,.02)}
