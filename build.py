@@ -27,6 +27,7 @@ from statistics import mean, stdev
 
 import pandas as pd
 
+import grading
 import sleeper
 
 ROOT = Path(__file__).parent
@@ -895,6 +896,19 @@ def main():
                                           team_of, issues,
                                           override=overrides.get(int(year)))
 
+    # Grades: lineup efficiency, all-play luck and draft outcomes per season,
+    # then percentiles and awards across every completed season.
+    missing = []
+    for year, s in sorted(seasons.items()):
+        s["grades"] = grading.grade_season(s)
+        d = s["grades"]["draft"]
+        if d and d["missing"]:
+            missing.append(f"{year} {d['missing']}")
+    awards = grading.history(seasons)
+    if missing:
+        issues.append("draft grades: picks never rostered in the regular "
+                      "season, counted as 0 points - " + ", ".join(missing))
+
     if issues:
         print("Data notes:")
         for i in issues:
@@ -909,6 +923,7 @@ def main():
               f"trash {s['consolationWinner']}")
 
     idx = build_index(seasons)
+    idx["awards"] = awards
     (OUT / "index.json").write_text(json.dumps(idx, separators=(",", ":")))
     print(f"  index.json  {len(idx['seasons'])} seasons, "
           f"{len(idx['coaches'])} coaches")

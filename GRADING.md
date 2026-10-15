@@ -5,6 +5,25 @@ before implementation so the decisions and the reference numbers are settled.
 Build order below is deliberate — the first two need no data the repo doesn't
 already have.
 
+**Status:** sections 1-3 and the presentation are built, in `grading.py`,
+shown on each season's Grades tab and as Records on the Overall page. The
+build reproduces both 2024 reference tables exactly. Section 4 (ADP) is not
+built.
+
+Differences from the notes below, found while building:
+
+- **Slots come from each lineup.** 2015-2019 had no W/T, so the optimum is
+  solved over the slots that lineup actually had. No scipy: with at most two
+  flex slots, trying each way they can go and taking the top scorers per
+  position is exact.
+- **"Most points left on the bench" is per week**, since seasons run 16 or
+  17 weeks depending on format and playoff run.
+- **Draft matching.** Before 2025 the board has full names and the lineups
+  initials, so picks match on initial + surname + position. Washington's
+  defence is matched across its three names. Around 1-5 picks a season were
+  never on a roster in the regular season and count as 0; the build lists the
+  count per season.
+
 ## 1. Lineup efficiency (no new data)
 
 Points a coach actually started, against the best legal lineup their roster

@@ -100,10 +100,19 @@ Don't upload files through the GitHub web UI. Doing that alongside local
 commits forks the history, which has already happened once and needed a merge
 to untangle.
 
-## Planned
+## Grades
 
-`GRADING.md` holds the agreed design for grading seasons and drafts, with
-reference numbers to check an implementation against. Not built yet.
+`grading.py` builds lineup efficiency, all-play luck and draft outcome grades
+per season, plus percentiles and all-time awards; the design and its 2024
+reference numbers are in `GRADING.md`, and the build matches every one. After
+touching grading, re-check against that table. ADP (section 4) is not built:
+it needs historical ADP from outside the repo.
+
+- The optimal lineup uses each lineup's own starting slots: 2015-2019 had no
+  W/T. A fixed ten-slot shape overstated those seasons' optimum.
+- Before 2025 the draft board has full names and lineups have initials
+  (`J. Taylor`); picks are matched on initial + surname + position, and a
+  shared key goes to whoever the drafting coach rostered.
 
 ## Open
 

@@ -384,3 +384,21 @@ td[class*="heat-"]{box-shadow:inset 0 0 0 1px var(--panel)}
 .heatkey .mid{background:var(--panel);border:1px solid var(--line)}
 .heatkey .heat-down4{margin-left:.3rem}
 .heatkey .heat-up4{margin-right:.3rem}
+
+/* grades */
+.subhead{font-size:1rem;margin:1.2rem 0 .5rem;color:var(--muted)}
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:1rem}
+.split table{min-width:0}
+td .of{color:var(--muted);font-size:.78em}
+.pl2{font-weight:500}
+
+/* records */
+.awards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:.5rem}
+.award{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:.75rem .85rem}
+.award h3{font-size:1.05rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.award .anote{margin:.1rem 0 0;font-size:.72rem;color:var(--muted)}
+.award ol{list-style:none;margin:.55rem 0 0;padding:0;display:grid;gap:.35rem}
+.award li{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem}
+.award li:first-child .coachname{color:var(--amber)}
+.award .who{min-width:0}
+.award .val{font-family:var(--mono);font-size:.8rem;white-space:nowrap}

@@ -109,6 +109,8 @@ old `W/R` and `W/T`, and both eras run ten starters and six bench.
 
 ```
 build.py              CSVs -> JSON
+grading.py            season grades and all-time records (see GRADING.md)
+sleeper.py            Sleeper API dumps -> the same shape as the CSVs
 raw/                  the source CSVs
 docs/
   index.html
@@ -125,8 +127,8 @@ first page stays quick however many years get added.
 Pages are addressable, so links can be shared:
 
 - `#/` — all-time record (add `?mode=regular` or `?mode=playoffs`)
-- `#/season/2023/standings` — also `playoffs`, `power`, `matches`, `weekly`,
-  `overall`, `draft`, `moves`, `trades`
+- `#/season/2023/standings` — also `playoffs`, `power`, `grades`, `matches`,
+  `weekly`, `overall`, `draft`, `moves`, `trades`
 - `#/season/2025/weekly?week=5`, `#/season/2025/overall?coach=Beano` — filtered
 - `#/season/2023/matches?week=15&coach=Dee` — filtered
 - `#/game/2023-17-Ciaran-Whytey` — a single box score

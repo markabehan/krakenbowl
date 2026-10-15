@@ -170,6 +170,25 @@ function renderOverall(params) {
   const points = INDEX.career.reduce((a, r) => a + r[M.pf], 0);
   const first = INDEX.seasons[0].year;
 
+  // All-time awards from the season grades; completed seasons only.
+  const AWARD_FORMAT = {
+    benchedPerWeek: v => `${v.toFixed(1)} a week`,
+    efficiency: pct,
+    luck: v => `${signed(v, x => x.toFixed(1))} wins`,
+    pts: v => `${pts(v)} pts`,
+  };
+  const awardValue = (unit, r) => AWARD_FORMAT[unit](r[unit]);
+  const awards = (INDEX.awards || []).map(a => `
+    <div class="award">
+      <h3>${esc(a.title)}</h3>
+      ${a.note ? `<p class="anote">${esc(a.note)}</p>` : ''}
+      <ol>${a.rows.map(r => `<li>
+        <span class="who"><a class="coachname" href="#/season/${r.year}/grades">${esc(r.coach)}</a>
+          <span class="teamname">${r.year}${r.player ? ' &middot; ' + esc(r.player)
+            + ` (pick ${r.pick})` : ''}</span></span>
+        <span class="val">${awardValue(a.unit, r)}</span></li>`).join('')}</ol>
+    </div>`).join('');
+
   const honours = INDEX.seasons.map(s => `
     <a class="honour" href="#/season/${s.year}/playoffs">
       <span class="hy">${s.year}</span>
@@ -220,6 +239,12 @@ function renderOverall(params) {
         <tbody>${h2hRows}</tbody>
       </table></div></div>
     </div>
+    ${awards ? `<div class="section">
+      <h2>Records</h2>
+      <p class="sectnote">From the season grades, completed seasons only. Each links to
+        that season's Grades tab.</p>
+      <div class="awards">${awards}</div>
+    </div>` : ''}
     <div class="section">
       <h2>Roll of honour</h2>
       <div class="honours">${honours}</div>
@@ -230,6 +255,7 @@ function renderOverall(params) {
 
 const SEASON_VIEWS = [
   ['standings', 'Standings'], ['playoffs', 'Playoffs'], ['power', 'Power rankings'],
+  ['grades', 'Grades'],
   ['matches', 'Matches'], ['weekly', 'Highest weekly'], ['overall', 'Highest overall'],
   ['draft', 'Draft'], ['moves', 'Adds &amp; drops'], ['trades', 'Trades'],
 ];
@@ -262,7 +288,7 @@ async function renderSeason(year, sub, params) {
     </div>`;
 
   const body = {
-    standings: viewStandings, playoffs: viewPlayoffs, power: viewPower,
+    standings: viewStandings, playoffs: viewPlayoffs, power: viewPower, grades: viewGrades,
     matches: viewMatches, weekly: viewWeekly, overall: viewOverall,
     draft: viewDraft, moves: viewMoves, trades: viewTrades,
   }[sub] || viewStandings;
@@ -523,6 +549,114 @@ function viewPower(s) {
     </div>
     <div class="legend"><span class="k">Consistency is the standard deviation of weekly
       scores &mdash; lower is steadier</span></div>`;
+}
+
+/* ---------- season: grades ---------- */
+
+const ordinal = n => n + ((n % 100 >= 11 && n % 100 <= 13) ? 'th'
+  : (['th', 'st', 'nd', 'rd'][n % 10] || 'th'));
+
+function viewGrades(s) {
+  const g = s.grades;
+  if (!g || !g.lineups.length) return `<div class="pagehead"><h1>Grades</h1>
+    <p class="empty">No games yet in ${s.year}.</p></div>`;
+  const team = c => `<a class="coachname" href="#/coach/${slug(c)}">${esc(c)}</a>
+    <span class="teamname">${esc(s.teams[c])}</span>`;
+  const pc = r => r.pctile === null || r.pctile === undefined ? '' : ordinal(r.pctile);
+  const sofar = s.inProgress ? ' so far' : '';
+
+  const eff = heatScale(g.lineups.map(r => r.efficiency), 1);
+  const lineups = g.lineups.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td><td class="col-name">${team(r.coach)}</td>
+    <td class="num">${r.started.toFixed(1)}</td><td class="num">${r.optimal.toFixed(1)}</td>
+    <td class="num">${r.benched.toFixed(1)}</td>
+    <td class="num${eff.cls(r.efficiency)}">${pct(r.efficiency)}</td>
+    <td class="num muted">${pc(r)}</td></tr>`).join('');
+
+  const ap = [...g.allPlay].sort((a, b) => b.apPct - a.apPct);
+  const luck = heatScale(ap.map(r => r.luck), 1, 0);
+  const allplay = ap.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td><td class="col-name">${team(r.coach)}</td>
+    <td class="rec">${rec(r)}</td><td class="rec">${r.apW}-${r.apL}</td>
+    <td class="num">${pct(r.apPct)}</td>
+    <td class="num${luck.cls(r.luck)}">${signed(r.luck, v => v.toFixed(1))}</td>
+    <td class="num muted">${pc(r)}</td></tr>`).join('');
+
+  let draft = '';
+  const d = g.draft;
+  if (d) {
+    const val = heatScale(d.coaches.map(r => r.value), 1, 0);
+    const coaches = d.coaches.map(r => `<tr>
+      <td class="rank">${r.rank}</td><td class="col-name">${team(r.coach)}</td>
+      <td class="num">${pts(r.pts)}</td>
+      <td class="num${val.cls(r.value)}">${signed(r.value, String)}</td></tr>`).join('');
+    const pickRow = p => `<tr>
+      <td class="num">${p.pick}<span class="of"> &middot; R${p.round}</span></td>
+      <td class="col-name"><span class="pl2">${esc(p.player)}</span>
+        <span class="teamname">${esc(p.pos)} &middot; ${esc(p.coach)}</span></td>
+      <td class="num">${p.rostered ? pts(p.pts) : '<span class="muted" title="Never on a roster here in the regular season">dropped</span>'}</td>
+      <td class="num">${ordinal(p.ptsRank)}</td>
+      <td class="num">${signed(p.value, String)}</td></tr>`;
+    const steals = [...d.picks].sort((a, b) => b.value - a.value).slice(0, 8);
+    const busts = d.picks.filter(p => p.round <= 5)
+      .sort((a, b) => a.value - b.value).slice(0, 8);
+    const pickTable = rows => `<div class="tablecard"><div class="tscroll"><table>
+      <thead><tr><th>Pick</th><th class="col-name">Player</th><th>Points</th>
+        <th>Finished</th><th>Value</th></tr></thead>
+      <tbody>${rows.map(pickRow).join('')}</tbody></table></div></div>`;
+    draft = `
+    <div class="section">
+      <h2>Draft, judged on outcome</h2>
+      <p class="sectnote">Every drafted player ranked by points scored${sofar} in the
+        regular season, against the slot they were taken in. <strong>Value</strong> is how
+        many places better (+) or worse (&minus;) a pick finished than where it was taken.
+        Points only count <strong>while the player was rostered in this league</strong>:
+        a pick dropped in week 3 stops scoring here, so this blurs a bad player with an
+        early cut, and isn't full-season NFL production.</p>
+      <div class="tablecard"><div class="tscroll"><table>
+        <thead><tr><th class="rank">#</th><th class="col-name">Coach</th>
+          <th>Points from picks</th><th>Value</th></tr></thead>
+        <tbody>${coaches}</tbody></table></div></div>
+      <div class="split">
+        <div><h3 class="subhead">Steals</h3>${pickTable(steals)}</div>
+        <div><h3 class="subhead">Busts, rounds 1&ndash;5</h3>${pickTable(busts)}</div>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year}${s.inProgress ? ' &middot; in progress' : ''}</p>
+      <h1>Grades</h1>
+      <p>How well each coach set lineups, how much luck the schedule gave them, and how
+         their draft turned out. <strong>History</strong> is the percentile against every
+         completed coach-season since ${INDEX.seasons[0].year}${s.inProgress
+           ? '; this season\'s numbers are partial' : ''}.</p>
+    </div>
+    <div class="section" style="margin-top:0">
+      <h2>Lineup efficiency</h2>
+      <p class="sectnote">Points started against the best legal lineup the whole roster
+        could have fielded, every week${sofar}, playoffs included.</p>
+      <div class="tablecard"><div class="tscroll"><table>
+        <thead><tr><th class="rank">#</th><th class="col-name">Coach</th>
+          <th>Started</th><th>Optimal</th><th>Left&nbsp;on&nbsp;bench</th>
+          <th>Efficiency</th><th>History</th></tr></thead>
+        <tbody>${lineups}</tbody></table></div></div>
+    </div>
+    <div class="section">
+      <h2>Luck</h2>
+      <p class="sectnote">Each week's score against all the other teams, not just the one
+        drawn. The all-play record is what the scoring deserved; <strong>luck</strong> is
+        actual wins minus the wins that all-play rate gives over the games played.
+        Regular season only.</p>
+      <div class="tablecard"><div class="tscroll"><table>
+        <thead><tr><th class="rank">#</th><th class="col-name">Coach</th>
+          <th>Actual</th><th>All-play</th><th>All-play&nbsp;%</th><th>Luck</th>
+          <th>History</th></tr></thead>
+        <tbody>${allplay}</tbody></table></div></div>
+    </div>
+    ${draft}
+    <div class="legend">${HEAT_KEY}</div>`;
 }
 
 /* ---------- season: highest weekly / overall scores ---------- */
