@@ -421,13 +421,34 @@ function viewPower(s) {
     <p class="empty">No regular season games yet in ${s.year}.</p></div>`;
   const ros = s.inProgress;
   const n = s.standings.length;
+
+  // Heat map: each column shaded by distance from the league average, blue
+  // where it helps the team and red where it hurts. `dir` is which way is
+  // good - lower is better for consistency (steadier) and schedule strength.
+  const HEAT = { ppg: 1, consistency: -1, breakdown: 1, sos: -1, ros: -1, fortune: 1 };
+  const spread = {};
+  for (const k of Object.keys(HEAT)) {
+    const vals = s.power.map(r => r[k]);
+    const mid = vals.reduce((x, y) => x + y, 0) / vals.length;
+    spread[k] = { mid, max: Math.max(...vals.map(v => Math.abs(v - mid))) || 1 };
+  }
+  const heat = (r, k, text) => {
+    const { mid, max } = spread[k];
+    const t = (r[k] - mid) * HEAT[k] / max;
+    const step = Math.abs(t) < 0.15 ? 0 : Math.abs(t) < 0.4 ? 1 : Math.abs(t) < 0.65 ? 2 : Math.abs(t) < 0.9 ? 3 : 4;
+    const cls = step ? ` heat-${t > 0 ? 'up' : 'down'}${step}` : '';
+    const diff = r[k] - mid;
+    const tip = `${diff >= 0 ? '+' : ''}${diff.toFixed(k === 'sos' || k === 'ros' || k === 'fortune' ? 0 : 1)} vs average`
+      + (step ? (t > 0 ? ', helps' : ', hurts') : '');
+    return `<td class="num${cls}" title="${tip}">${text}</td>`;
+  };
   const cells = r => `
-    <td class="num">${pts(r.ppg)}</td>
-    <td class="num">${pts(r.consistency)}</td>
-    <td class="num">${r.breakdown.toFixed(1)}</td>
-    <td class="num">${r.sos}</td>
-    ${ros ? `<td class="num">${r.ros}</td>` : ''}
-    <td class="num">${signed(r.fortune, String)}</td>`;
+    ${heat(r, 'ppg', pts(r.ppg))}
+    ${heat(r, 'consistency', pts(r.consistency))}
+    ${heat(r, 'breakdown', r.breakdown.toFixed(1))}
+    ${heat(r, 'sos', r.sos)}
+    ${ros ? heat(r, 'ros', r.ros) : ''}
+    ${heat(r, 'fortune', signed(r.fortune, String))}`;
   const rows = s.power.map((r, i) => `<tr>
     <td class="rank">${i + 1}</td>
     <td class="col-name"><a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
@@ -459,6 +480,15 @@ function viewPower(s) {
         <td class="num">${a.breakdown.toFixed(1)}</td><td class="num">${a.sos}</td>
         ${ros ? `<td class="num">${a.ros}</td>` : ''}<td class="num">${a.fortune}</td></tr></tfoot>
     </table></div></div>
+    <div class="legend">
+      <span class="k heatkey">Hurts
+        <span class="heat-down4"></span><span class="heat-down3"></span><span class="heat-down2"></span><span class="heat-down1"></span>
+        <span class="mid"></span>
+        <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
+        Helps</span>
+      <span class="k">Shaded by distance from the league average in each column. Lower consistency
+        and SoS help: steadier scoring and easier opponents.</span>
+    </div>
     <div class="legend"><span class="k">Consistency is the standard deviation of weekly
       scores &mdash; lower is steadier</span></div>`;
 }
