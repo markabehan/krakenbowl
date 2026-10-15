@@ -100,6 +100,11 @@ Don't upload files through the GitHub web UI. Doing that alongside local
 commits forks the history, which has already happened once and needed a merge
 to untangle.
 
+## Planned
+
+`GRADING.md` holds the agreed design for grading seasons and drafts, with
+reference numbers to check an implementation against. Not built yet.
+
 ## Open
 
 The Trash Bowl winners for 2016-2024 are derived from the bracket, not
