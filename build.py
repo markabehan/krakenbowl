@@ -57,20 +57,19 @@ CHAMPIONSHIP_FORMAT = {
 }
 
 # How a tie on win ratio is broken.
-#   "group-wins"   record among the tied teams, counted in wins, then points.
-#                  The brackets played on the old platform, 2015-2024, follow
-#                  this; NFL.com's published sequence contradicts 2017, 2021
-#                  and 2024.
+#   "group-record" record among the tied teams: most wins, then fewest
+#                  losses, then points. The default. Every bracket played on the
+#                  old platform, 2015-2024, fits it (so do plain wins and win
+#                  ratio - the results can't separate them); NFL.com's published
+#                  sequence contradicts 2017, 2021 and 2024.
 #   "group-ratio"  record among the tied teams as a win ratio, then points.
 #                  The commissioner's seeding script, used for 2025.
-#   "nfl"          NFL.com's published sequence - see seed_nfl. 2026 on.
+#   "nfl"          NFL.com's published sequence - see seed_nfl. Not in use.
 TIEBREAK = {2025: "group-ratio"}
 
 
 def tiebreak_rule(year):
-    if year in TIEBREAK:
-        return TIEBREAK[year]
-    return "group-wins" if year < 2025 else "nfl"
+    return TIEBREAK.get(year, "group-record")
 
 
 def championship_format(year):
@@ -322,8 +321,8 @@ def standings(teams, matchups, regular_weeks, rule, year, issues):
             h2h, _ = mini_league(regular, [r["coach"] for r in tied])
             for r in tied:
                 r["h2hW"], r["h2hL"] = h2h[r["coach"]]
-            if rule == "group-wins":
-                tied.sort(key=lambda r: (-r["h2hW"], -r["pf"]))
+            if rule == "group-record":
+                tied.sort(key=lambda r: (-r["h2hW"], r["h2hL"], -r["pf"]))
             elif rule == "group-ratio":
                 tied.sort(key=lambda r: (-group_ratio(r), -r["pf"]))
             else:

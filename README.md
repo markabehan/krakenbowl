@@ -142,18 +142,20 @@ season (`TIEBREAK` in `build.py`):
 
 | Seasons | Tie on win ratio |
 | --- | --- |
-| 2015–2024 | most **wins** in games among the tied teams, then points scored |
+| 2015–2024, 2026– | most **wins** in games among the tied teams, then the **fewest losses** in those games, then points scored |
 | 2025 | best **win ratio** in games among the tied teams, then points scored (the commissioner's seeding script) |
-| 2026– | NFL.com's published rules, one seed at a time: record among the tied teams only if every pair met equally often, else points scored, then points against |
 
 For three or more teams the record is the one inside the tied group, because
 pairwise results can form a loop.
 
-The 2015–2024 rule is the one the brackets actually played follow. NFL.com's
-published rules contradict three of them: in 2017, 2021 and 2024 the tied
-teams hadn't all met equally often, so those rules go straight to points and
-give a different seed 1 (2017, 2024) or seed 3 (2021) from the one in the
-bracket.
+The old platform's tiebreak isn't recorded anywhere, so it was worked out from
+the brackets actually played. Every one of 2015–2024 fits wins-then-losses,
+but plain wins and win ratio fit them too - the three only differ in 2024's
+seventh and eighth places, which no bracket settles. Wins-then-losses was
+chosen as the most natural reading. NFL.com's published rules (kept in
+`seed_nfl`, unused) do not fit: in 2017, 2021 and 2024 the tied teams hadn't
+all met equally often, so those rules go straight to points and give a
+different seed 1 (2017, 2024) or seed 3 (2021) from the one in the bracket.
 
 From 2023 the sixth place is a **wildcard**: the top five by record, plus the
 highest scorer among the rest. In 2025 that is why Dudley (6-8, seventh on

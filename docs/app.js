@@ -234,7 +234,8 @@ async function renderSeason(year, sub, params) {
 /* ---------- season: standings ---------- */
 
 const TIEBREAKS = {
-  'group-wins': 'Ties on win ratio go to the most wins in games among the tied teams, then points scored.',
+  'group-record': `Ties on win ratio go to the most wins in games among the tied teams,
+        then the fewest losses in those games, then points scored.`,
   'group-ratio': 'Ties on win ratio go to the best win ratio in games among the tied teams, then points scored.',
   nfl: `Ties on win ratio follow NFL.com's rules, one seed at a time: the record among
         the tied teams counts only if they have all met equally often; otherwise
