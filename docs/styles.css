@@ -330,3 +330,24 @@ select{
   .pulse{animation:pulse 2.4s ease-in-out infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 }
+
+/* playoff places, standings */
+tr.inplayoffs td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+tr.inplayoffs{background:rgba(242,180,65,.05)}
+td.muted{color:var(--muted)}
+.col-name .tag{margin-left:.35rem;vertical-align:1px}
+tfoot td{border-top:1px solid var(--line);background:var(--panel-2);font-weight:600}
+tfoot td.col-name{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* score tables */
+td.opp{font-size:.86rem}
+td.res{font-family:var(--display);font-weight:700;font-size:1rem;text-align:center}
+td.res.w{color:var(--mint)}
+td.res.l{color:#E4695B}
+.scorelink{text-decoration:none}
+.scorelink:hover{color:var(--amber)}
+
+/* projected bracket */
+.mrow.proj:hover{border-color:var(--line)}
+.byes{color:var(--muted);font-size:.85rem;margin:0 0 .6rem}
+.byes strong{color:var(--text)}

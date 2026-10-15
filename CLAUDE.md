@@ -29,11 +29,13 @@ These catch real bugs. Several below were found exactly this way.
 
 ## League format
 
-Seeding: win ratio, then the record **among the tied teams**, then points.
-That record is counted in **wins, not win percentage** - teams don't always
-meet the same number of times inside a tied group. Both multi-way ties in
-league history (2018, 2025) only reproduce the bracket that was actually
-played when counted as wins.
+Seeding: win ratio, then a tiebreak that depends on the season (`TIEBREAK`
+in `build.py`): 2015-2024 wins among the tied teams then points; 2025 win
+ratio among the tied teams then points (the commissioner's script); 2026 on
+NFL.com's rules (`seed_nfl`). NFL.com's rules do **not** reproduce the
+2017, 2021 or 2024 brackets that were played, so don't apply them to old
+seasons. From 2023 the sixth place is a wildcard: highest scorer outside the
+top five.
 
 | Seasons | Regular | Playoffs | Championship | Trash Bowl |
 | --- | --- | --- | --- | --- |
@@ -43,7 +45,13 @@ played when counted as wins.
 | 2020 | 1-13 | 14-16 | top 6, seeds 1-2 bye | seeds 7-10 |
 | 2021-2022 | 1-14 | 15-17 | top 6, seeds 1-2 bye | seeds 7-10 |
 | 2023-2024 | 1-14 | 15-17 | top 5 + highest scorer of the bottom 5 | the other four |
-| 2025- | 1-14 | 15-17 | from Sleeper's bracket | from Sleeper's bracket |
+| 2025- | 1-14 | 15-17 | as 2023, field taken from Sleeper's bracket | from Sleeper's bracket |
+
+Drafts are linear up to 2017 and snake from 2018 (`LINEAR_DRAFTS`).
+
+Power rankings and the weekly score tables are validated against the
+commissioner's output for 2025; they match to the cent except where two
+values sit exactly on a half cent.
 
 Set in `PLAYOFF_WEEKS`, `CHAMPIONSHIP_FORMAT` and `CHAMPIONS` at the top of
 `build.py`. The league tracks seedings by hand and the commissioner sets the

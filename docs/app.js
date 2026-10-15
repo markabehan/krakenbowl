@@ -156,7 +156,8 @@ function renderOverall(params) {
 /* ---------- season shell ---------- */
 
 const SEASON_VIEWS = [
-  ['standings', 'Standings'], ['playoffs', 'Playoffs'], ['matches', 'Matches'],
+  ['standings', 'Standings'], ['playoffs', 'Playoffs'], ['power', 'Power rankings'],
+  ['matches', 'Matches'], ['weekly', 'Highest weekly'], ['overall', 'Highest overall'],
   ['draft', 'Draft'], ['moves', 'Adds &amp; drops'], ['trades', 'Trades'],
 ];
 
@@ -188,56 +189,85 @@ async function renderSeason(year, sub, params) {
     </div>`;
 
   const body = {
-    standings: viewStandings, playoffs: viewPlayoffs, matches: viewMatches,
+    standings: viewStandings, playoffs: viewPlayoffs, power: viewPower,
+    matches: viewMatches, weekly: viewWeekly, overall: viewOverall,
     draft: viewDraft, moves: viewMoves, trades: viewTrades,
   }[sub] || viewStandings;
 
   view.innerHTML = years + banner + subnav + body(s, params);
   if (sub === 'matches') wireMatchFilters(s);
   if (sub === 'moves') wireMoveFilters(s);
+  if (sub === 'weekly') wireFilters(s, 'weekly', { sw: 'week' });
+  if (sub === 'overall') wireFilters(s, 'overall', { so: 'coach' });
 }
 
 /* ---------- season: standings ---------- */
 
+const TIEBREAKS = {
+  'group-wins': 'Ties on win ratio go to the most wins in games among the tied teams, then points scored.',
+  'group-ratio': 'Ties on win ratio go to the best win ratio in games among the tied teams, then points scored.',
+  nfl: `Ties on win ratio follow NFL.com's rules, one seed at a time: the record among
+        the tied teams counts only if they have all met equally often; otherwise
+        points scored, then points against.`,
+};
+
+const signed = (n, f = pts) => (n > 0 ? '+' : '') + f(n);
+
 function viewStandings(s) {
-  const champ = new Set(s.championshipField);
+  const proj = s.inProgress ? s.projection : null;
+  const champ = new Set(proj ? proj.championshipField : s.championshipField);
+  const wildcard = proj ? proj.wildcard : s.wildcard;
+  const wc = s.format && s.format.rule === 'wildcard';
   const rows = s.standings.map(r => `<tr${champ.has(r.coach) ? ' class="inplayoffs"' : ''}>
     <td class="rank">${r.rank}</td>
     <td class="col-name">
-      <a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
+      <a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>${
+        r.coach === wildcard ? ' <span class="tag">Wildcard</span>' : ''}
       <span class="teamname">${esc(r.team)}</span>
     </td>
     <td class="rec">${rec(r)}</td>
+    <td class="rec muted">${r.h2hW !== undefined ? `${r.h2hW}-${r.h2hL}` : ''}</td>
     <td class="num">${pts(r.pf)}</td>
     <td class="num">${pts(r.pa)}</td>
-    <td class="num">${r.diff > 0 ? '+' : ''}${pts(r.diff)}</td>
+    <td class="num">${signed(r.diff)}</td>
+    ${wc ? `<td class="num">${r.wcGap === 0 ? '&mdash;' : signed(r.wcGap)}</td>` : ''}
     <td class="num">${pts(r.ppg)}</td>
     <td class="num">${pts(r.high)}</td>
   </tr>`).join('');
 
   const wk = s.regularWeeks;
-  const wild = s.wildcard
-    ? ` <strong>${esc(s.wildcard)}</strong> took the last place as the
-        highest scorer outside the top five.`
-    : '';
+  const wild = !wildcard ? ''
+    : proj ? ` <strong>${esc(wildcard)}</strong> holds the wildcard as the highest
+        scorer outside the top five.`
+    : ` <strong>${esc(wildcard)}</strong> took the last place as the
+        highest scorer outside the top five.`;
+  const marked = proj
+    ? 'If the season ended today, the coaches marked in amber would make the championship bracket.'
+    : s.championshipField.length
+      ? 'Coaches who reached the championship bracket are marked in amber.'
+      : 'The playoff field is not settled yet.';
 
   return `
     <div class="pagehead">
       <p class="eyebrow">Season ${s.year} &middot; ${s.standings.length} teams</p>
       <h1>${s.inProgress ? 'Standings' : 'Final standings'}</h1>
-      <p>Regular season, weeks ${wk[0]}&ndash;${wk[wk.length - 1]}.
-         Ranked by win ratio, then the record among tied teams, then points scored.
-         ${s.championshipField.length
-           ? 'Coaches who reached the championship bracket are marked in amber.'
-           : 'The playoff field is not settled yet.'}${wild}</p>
+      <p>Regular season, weeks ${wk[0]}&ndash;${wk[wk.length - 1]}. Ranked by win ratio.
+         ${TIEBREAKS[s.tiebreak] || ''} ${marked}${wild}</p>
     </div>
     <div class="tablecard"><div class="tscroll"><table>
       <thead><tr>
         <th class="rank">#</th><th class="col-name">Coach</th>
-        <th>Record</th><th>PF</th><th>PA</th><th>Diff</th><th>Avg</th><th>Best</th>
+        <th>Record</th><th title="Record in games among teams tied on win ratio">Tied&nbsp;H2H</th>
+        <th>PF</th><th>PA</th><th>Diff</th>
+        ${wc ? '<th title="Points for, against the wildcard holder">vs&nbsp;WC</th>' : ''}
+        <th>Avg</th><th>Best</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table></div></div>`;
+    </table></div></div>
+    <div class="legend">
+      <span class="k">Tied H2H: record against the other teams on the same win ratio</span>
+      ${wc ? '<span class="k">vs WC: points for, compared with the wildcard holder</span>' : ''}
+    </div>`;
 }
 
 /* ---------- season: playoffs ---------- */
@@ -276,7 +306,50 @@ function groupByWeek(games, heading) {
   }).join('');
 }
 
+function projRow(s, g) {
+  const sd = t => `<span class="sd">${t.seed}</span>`;
+  return `<div class="mrow proj">
+    <div class="side">
+      <div class="nm">${sd(g.high)}${esc(g.high.coach)}</div>
+      <div class="tm">${esc(s.teams[g.high.coach])}</div>
+    </div>
+    <div><div class="score"><span class="dash">v</span></div>
+      ${g.next ? `<span class="finaltag">Winner plays ${esc(g.next.coach)}</span>` : ''}</div>
+    <div class="side r">
+      <div class="nm">${esc(g.low.coach)}${sd(g.low)}</div>
+      <div class="tm">${esc(s.teams[g.low.coach])}</div>
+    </div>
+  </div>`;
+}
+
+function viewProjection(s) {
+  const p = s.projection;
+  const byes = p.championship && p.championship.byes.length
+    ? `<p class="byes">Bye: ${p.championship.byes.map(b =>
+        `<strong>${esc(b.coach)}</strong> (${b.seed})`).join(' and ')}</p>` : '';
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year} &middot; through week ${s.regularWeeks[s.regularWeeks.length - 1]}</p>
+      <h1>If the season ended today</h1>
+      <p>The ${s.year} playoffs haven't started. These are the week ${p.week || ''} games the
+         current standings would produce.${p.wildcard ? ` <strong>${esc(p.wildcard)}</strong>
+         takes the sixth seed as the wildcard, the highest scorer outside the top five.` : ''}
+         Numbers beside each coach are their seed.</p>
+    </div>
+    <div class="section" style="margin-top:0">
+      <h2><span class="dot-g"></span> Championship</h2>
+      ${byes}
+      <div class="mlist">${p.championship ? p.championship.games.map(g => projRow(s, g)).join('') : ''}</div>
+    </div>
+    ${p.consolation ? `<div class="section">
+      <h2><span class="dot-s"></span> Trash Bowl</h2>
+      <p class="byes">Seeds here are standings places.</p>
+      <div class="mlist">${p.consolation.games.map(g => projRow(s, g)).join('')}</div>
+    </div>` : ''}`;
+}
+
 function viewPlayoffs(s) {
+  if (s.inProgress && s.projection) return viewProjection(s);
   if (!s.playoffWeeks.length) {
     return `<div class="pagehead">
         <p class="eyebrow">Season ${s.year}</p><h1>Playoffs</h1>
@@ -308,6 +381,137 @@ function viewPlayoffs(s) {
       <h2><span class="dot-s"></span> Trash Bowl</h2>
       ${groupByWeek(cons)}
     </div>` : ''}`;
+}
+
+/* ---------- season: power rankings ---------- */
+
+function viewPower(s) {
+  if (!s.power || !s.power.length) return `<div class="pagehead"><h1>Power rankings</h1>
+    <p class="empty">No regular season games yet in ${s.year}.</p></div>`;
+  const ros = s.inProgress;
+  const n = s.standings.length;
+  const cells = r => `
+    <td class="num">${pts(r.ppg)}</td>
+    <td class="num">${pts(r.consistency)}</td>
+    <td class="num">${r.breakdown.toFixed(1)}</td>
+    <td class="num">${r.sos}</td>
+    ${ros ? `<td class="num">${r.ros}</td>` : ''}
+    <td class="num">${signed(r.fortune, String)}</td>`;
+  const rows = s.power.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td>
+    <td class="col-name"><a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
+      <span class="teamname">${esc(s.teams[r.coach])}</span></td>
+    ${cells(r)}</tr>`).join('');
+  const a = s.powerAverage;
+
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year} &middot; ${s.regularWeeks.length} weeks</p>
+      <h1>Power rankings</h1>
+      <p>Regular season, ranked by points per game. <strong>Breakdown</strong> is how many
+         teams a score would have beaten that week (0&ndash;${n - 1}), averaged.
+         <strong>SoS</strong> is the opponents' average breakdown in the weeks they were
+         faced, as a percentage of the best possible${ros
+           ? '; <strong>RoS SoS</strong> does the same for the fixtures still to come'
+           : ''}. <strong>Fortune</strong> adds up how lucky the results were: a win with a
+         low breakdown counts up, a loss with a high one counts down.</p>
+    </div>
+    <div class="tablecard"><div class="tscroll"><table>
+      <thead><tr>
+        <th class="rank">#</th><th class="col-name">Coach</th>
+        <th>PPG</th><th>Consistency</th><th>Breakdown</th><th>SoS</th>
+        ${ros ? '<th>RoS&nbsp;SoS</th>' : ''}<th>Fortune</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td class="rank"></td><td class="col-name">Average</td>
+        <td class="num">${a.ppg.toFixed(1)}</td><td class="num">${a.consistency.toFixed(1)}</td>
+        <td class="num">${a.breakdown.toFixed(1)}</td><td class="num">${a.sos}</td>
+        ${ros ? `<td class="num">${a.ros}</td>` : ''}<td class="num">${a.fortune}</td></tr></tfoot>
+    </table></div></div>
+    <div class="legend"><span class="k">Consistency is the standard deviation of weekly
+      scores &mdash; lower is steadier</span></div>`;
+}
+
+/* ---------- season: highest weekly / overall scores ---------- */
+
+function scoreTable(s, rows, showWeek) {
+  const body = rows.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td>
+    ${showWeek ? `<td class="num">${r.week}</td>` : ''}
+    <td class="col-name"><a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
+      <span class="teamname">${esc(s.teams[r.coach])}</span></td>
+    <td class="opp">${esc(r.opp)}</td>
+    <td class="res ${r.result.toLowerCase()}">${r.result}</td>
+    <td class="num"><a class="scorelink" href="#/game/${slug(r.game)}">${pts(r.pts)}</a></td>
+    <td class="num">${r.breakdown}</td>
+    <td class="num">${signed(r.fortune, String)}</td>
+  </tr>`).join('');
+  return `<div class="tablecard"><div class="tscroll"><table>
+    <thead><tr><th class="rank">#</th>${showWeek ? '<th>Week</th>' : ''}
+      <th class="col-name">Coach</th><th>Opponent</th><th>Result</th><th>Score</th>
+      <th>Breakdown</th><th>Fortune</th></tr></thead>
+    <tbody>${body}</tbody></table></div></div>`;
+}
+
+const SCORE_NOTE = `Breakdown is how many teams the score would have beaten that week;
+  fortune is +(teams it would have lost to) for a win and &minus;breakdown for a loss.`;
+
+function viewWeekly(s, params) {
+  const week = params.get('week') || 'all';
+  const weeks = week === 'all' ? s.regularWeeks : [+week];
+  const opts = ['<option value="all">All weeks</option>'].concat(
+    s.regularWeeks.map(w => `<option value="${w}"${week == w ? ' selected' : ''}>Week ${w}</option>`)
+  ).join('');
+  const blocks = weeks.map(w => {
+    const rows = s.scores.filter(r => r.week === w);
+    return rows.length ? `<div class="weekhead">Week ${w}</div>${scoreTable(s, rows, false)}` : '';
+  }).join('');
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year}</p>
+      <h1>Highest weekly score</h1>
+      <p>Every team ranked by its score, week by week, regular season only. ${SCORE_NOTE}</p>
+    </div>
+    <div class="filters">
+      <div class="field"><label for="sw">Week</label><select id="sw">${opts}</select></div>
+    </div>
+    ${blocks || '<p class="empty">No regular season games yet.</p>'}`;
+}
+
+function viewOverall(s, params) {
+  const coach = params.get('coach') || 'all';
+  const ranked = [...s.scores].sort((a, b) => (b.pts - a.pts) || (a.week - b.week));
+  const rows = coach === 'all' ? ranked : ranked.filter(r => r.coach === coach);
+  const opts = ['<option value="all">All coaches</option>'].concat(
+    Object.keys(s.teams).sort().map(c =>
+      `<option value="${esc(c)}"${coach === c ? ' selected' : ''}>${esc(c)}</option>`)
+  ).join('');
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year}</p>
+      <h1>Highest overall score</h1>
+      <p>Every regular season score of the year, highest first. Pick a coach to see
+         just their weeks. ${SCORE_NOTE}</p>
+    </div>
+    <div class="filters">
+      <div class="field"><label for="so">Coach</label><select id="so">${opts}</select></div>
+      <span class="count">${rows.length} score${rows.length === 1 ? '' : 's'}</span>
+    </div>
+    ${rows.length ? scoreTable(s, rows, true) : '<p class="empty">No regular season games yet.</p>'}`;
+}
+
+/* One select per query parameter: {elementId: paramName}. */
+function wireFilters(s, sub, fields) {
+  const go = () => {
+    const q = new URLSearchParams();
+    for (const [id, key] of Object.entries(fields)) {
+      const v = document.getElementById(id).value;
+      if (v !== 'all') q.set(key, v);
+    }
+    const qs = q.toString();
+    location.hash = `#/season/${s.year}/${sub}${qs ? '?' + qs : ''}`;
+  };
+  for (const id of Object.keys(fields)) document.getElementById(id).addEventListener('change', go);
 }
 
 /* ---------- season: matches ---------- */
@@ -381,7 +585,8 @@ function viewDraft(s) {
     <div class="pagehead">
       <p class="eyebrow">Season ${s.year}</p>
       <h1>Draft board</h1>
-      <p>${s.draft.rounds.length} rounds, snaking each round. Columns follow the
+      <p>${s.draft.rounds.length} rounds, ${s.draft.style === 'linear'
+           ? 'in the same order every round' : 'snaking each round'}. Columns follow the
          first-round order; the small number is the overall pick.</p>
     </div>
     <div class="board"><table>

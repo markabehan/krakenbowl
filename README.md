@@ -89,11 +89,10 @@ What differs in these seasons, and why:
   Bowl field and both winners are taken from `winners_bracket` and
   `losers_bracket` rather than inferred. The build still derives them from the
   scores as a cross-check and warns on any disagreement.
-- **Seeding still follows the league's own rules.** The league tracks seedings
-  by hand and the commissioner sets the brackets manually, so these seasons use
-  the same tiebreak as every other year rather than Sleeper's own (which goes
-  straight to points). The 2025 bracket matches that, which is the check that
-  it is being applied.
+- **Seeding follows the league's own rules**, not Sleeper's (which goes
+  straight to points). The commissioner sets the brackets by hand. The build
+  checks that the seeding gives the same championship field as Sleeper's
+  bracket and warns if not.
 - **No stat lines.** Sleeper's matchup endpoint gives points per player but not
   the "251 Pass Yds, 1 Pass TD" detail the spreadsheet years carry. Box scores
   for these seasons show points only, and say so.
@@ -126,7 +125,9 @@ first page stays quick however many years get added.
 Pages are addressable, so links can be shared:
 
 - `#/` — all-time record (add `?mode=regular` or `?mode=playoffs`)
-- `#/season/2023/standings` — also `playoffs`, `matches`, `draft`, `moves`, `trades`
+- `#/season/2023/standings` — also `playoffs`, `power`, `matches`, `weekly`,
+  `overall`, `draft`, `moves`, `trades`
+- `#/season/2025/weekly?week=5`, `#/season/2025/overall?coach=Beano` — filtered
 - `#/season/2023/matches?week=15&coach=Dee` — filtered
 - `#/game/2023-17-Ciaran-Whytey` — a single box score
 - `#/coach/Whytey` — one coach's career
@@ -136,18 +137,28 @@ Pages are addressable, so links can be shared:
 Set at the top of `build.py` in `PLAYOFF_WEEKS`, `CHAMPIONSHIP_FORMAT` and
 `CHAMPIONS`. Change it there and rebuild.
 
-**Seeding.** Win ratio first. Ties are broken by the record among the tied
-teams, then by points scored. For two teams that is a straight head-to-head;
-for three or more it is the record inside the tied group, because pairwise
-results can form a loop and then no pair comparison can order them.
+**Seeding.** Win ratio first. How a tie on win ratio is broken depends on the
+season (`TIEBREAK` in `build.py`):
 
-That record is counted in **wins, not win percentage**. Teams don't always meet
-the same number of times inside a tied group, so the two can disagree, and both
-multi-way ties on record follow wins: 2018's three-way tie at 8-6 and 2025's
-four-way tie at 6-8 each produce the bracket that was actually played only when
-counted this way. In 2025 Chris went 2-1 inside the group but played three of
-those games to Dudley's five - by percentage Chris takes the last playoff
-place, by wins Dudley does, and Dudley is who played.
+| Seasons | Tie on win ratio |
+| --- | --- |
+| 2015–2024 | most **wins** in games among the tied teams, then points scored |
+| 2025 | best **win ratio** in games among the tied teams, then points scored (the commissioner's seeding script) |
+| 2026– | NFL.com's published rules, one seed at a time: record among the tied teams only if every pair met equally often, else points scored, then points against |
+
+For three or more teams the record is the one inside the tied group, because
+pairwise results can form a loop.
+
+The 2015–2024 rule is the one the brackets actually played follow. NFL.com's
+published rules contradict three of them: in 2017, 2021 and 2024 the tied
+teams hadn't all met equally often, so those rules go straight to points and
+give a different seed 1 (2017, 2024) or seed 3 (2021) from the one in the
+bracket.
+
+From 2023 the sixth place is a **wildcard**: the top five by record, plus the
+highest scorer among the rest. In 2025 that is why Dudley (6-8, seventh on
+record) played and Chris (sixth on record) didn't. The standings show each
+team's points against the wildcard holder's while that race is live.
 
 **Playoffs.**
 
@@ -158,7 +169,21 @@ place, by wins Dudley does, and Dudley is who played.
 | 2017–2019 | 1–14 | 15–16 | top 4 | seeds 5–8, bottom two sit out |
 | 2020 | 1–13 | 14–16 | top 6, seeds 1–2 bye | seeds 7–10 |
 | 2021–2022 | 1–14 | 15–17 | top 6, seeds 1–2 bye | seeds 7–10 |
-| 2023–2024 | 1–14 | 15–17 | top 5 plus the highest scorer of the bottom 5 | the other four |
+| 2023– | 1–14 | 15–17 | top 5 plus the highest scorer of the bottom 5 | the other four |
+
+**Drafts** ran in the same order every round up to 2017 and snake from 2018.
+The export numbers 2015 and 2017 as if they snaked, so the build renumbers
+`LINEAR_DRAFTS` from the first-round order.
+
+**A season in progress** shows the playoff picture if the regular season ended
+today: the qualifying teams are marked in the standings, and the Playoffs tab
+shows the first-round games (4 v 5 feeds seed 1, 3 v 6 feeds seed 2, as every
+six-team bracket since 2020 has).
+
+**Power rankings, highest weekly and highest overall** follow the
+commissioner's `sleeper_gameweeks.py`, rounding included, and are built for
+every season. Breakdown is how many teams a score would have beaten that week;
+equal scores go to the coach later in the alphabet, as in that script.
 
 Champions are listed explicitly because consolation games run alongside the
 final, so the last week doesn't identify a winner on its own. The build checks

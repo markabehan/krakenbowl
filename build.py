@@ -20,8 +20,10 @@ The script prints any data problems it finds before writing anything.
 
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
+from itertools import combinations
 from pathlib import Path
+from statistics import mean, stdev
 
 import pandas as pd
 
@@ -44,13 +46,43 @@ PLAYOFF_WEEKS = {
 
 # How many teams reached the championship bracket, and how the last place
 # was decided. "record" = straight down the standings. "wildcard" = the top
-# five by record, plus the highest scorer among the bottom five.
+# five by record, plus the highest scorer among the bottom five. A season not
+# listed uses the most recent format.
 CHAMPIONSHIP_FORMAT = {
     2015: (4, "record"), 2016: (4, "record"), 2017: (4, "record"),
     2018: (4, "record"), 2019: (4, "record"), 2020: (6, "record"),
     2021: (6, "record"), 2022: (6, "record"),
-    2023: (6, "wildcard"), 2024: (6, "wildcard"),
+    2023: (6, "wildcard"), 2024: (6, "wildcard"), 2025: (6, "wildcard"),
+    2026: (6, "wildcard"),
 }
+
+# How a tie on win ratio is broken.
+#   "group-wins"   record among the tied teams, counted in wins, then points.
+#                  The brackets played on the old platform, 2015-2024, follow
+#                  this; NFL.com's published sequence contradicts 2017, 2021
+#                  and 2024.
+#   "group-ratio"  record among the tied teams as a win ratio, then points.
+#                  The commissioner's seeding script, used for 2025.
+#   "nfl"          NFL.com's published sequence - see seed_nfl. 2026 on.
+TIEBREAK = {2025: "group-ratio"}
+
+
+def tiebreak_rule(year):
+    if year in TIEBREAK:
+        return TIEBREAK[year]
+    return "group-wins" if year < 2025 else "nfl"
+
+
+def championship_format(year):
+    if year in CHAMPIONSHIP_FORMAT:
+        return CHAMPIONSHIP_FORMAT[year]
+    return CHAMPIONSHIP_FORMAT[max(CHAMPIONSHIP_FORMAT)]
+
+
+# Drafts up to 2017 ran in the same order every round; 2018 on they snake.
+# The export numbers some linear years as if they snaked, so those years are
+# renumbered from the first-round order.
+LINEAR_DRAFTS = {2015, 2016, 2017}
 
 CHAMPIONS = {
     2015: "Dee",    2016: "Chris",   2017: "Beano",   2018: "Dudley",
@@ -188,33 +220,66 @@ def load_support(raw, issues):
 # --------------------------------------------------------------------------
 
 def mini_league(matchups, group):
-    """Wins for each coach counting only games against the others in the tie.
+    """Win-loss for each coach counting only games against the others in the
+    tie, and how many times each pair met.
 
     With two teams this is the head-to-head result. With three or more it is
     the record inside the tied group, which is what decides a multi-way tie;
     comparing pairs cannot, because the pairwise results can form a loop.
-
-    Counted as wins, not win ratio. Teams don't always play each other the same
-    number of times, so the two differ - and where the league's own brackets
-    settle it (2018 and 2025 both had multi-way ties) they follow wins.
     """
-    wins = {c: 0 for c in group}
+    rec = {c: [0, 0] for c in group}
+    meetings = Counter()
     members = set(group)
     for m in matchups:
         a, b = m["home"], m["away"]
-        if {a["coach"], b["coach"]} <= members and a["points"] != b["points"]:
-            win = a if a["points"] > b["points"] else b
-            wins[win["coach"]] += 1
-    return wins
+        if {a["coach"], b["coach"]} <= members:
+            meetings[frozenset((a["coach"], b["coach"]))] += 1
+            if a["points"] != b["points"]:
+                win, lose = (a, b) if a["points"] > b["points"] else (b, a)
+                rec[win["coach"]][0] += 1
+                rec[lose["coach"]][1] += 1
+    return rec, meetings
 
 
-def standings(teams, matchups, regular_weeks, head_to_head=True):
-    """Regular season table.
+def group_ratio(r):
+    """Win ratio inside the tied group, rounded as the seeding script does."""
+    games = r["h2hW"] + r["h2hL"]
+    return round(r["h2hW"] / games, 3) if games else 0
 
-    The league's own rule is win ratio, then the record among tied teams, then
-    points. Sleeper doesn't use head-to-head - it goes straight to points - and
-    it seeds its brackets that way, so for those seasons `head_to_head` is off,
-    otherwise the table would contradict the bracket it sits beside.
+
+def seed_nfl(tied, regular, year, issues):
+    """NFL.com's sequence for a tie on win ratio, one seed at a time.
+
+    1. Record among the tied teams - only if every pair of them met the same
+       number of times; otherwise the step is skipped.
+    2. Points for.  3. Division record (no divisions here, so skipped).
+    4. Points against.  5. Coin flip.
+    Once a seed is taken, the rest start again from step 1.
+    """
+    left, out = list(tied), []
+    while left:
+        group = [r["coach"] for r in left]
+        rec, meetings = mini_league(regular, group)
+        counts = {meetings[frozenset(p)] for p in combinations(group, 2)}
+        pool = left
+        if len(counts) == 1 and counts != {0}:
+            best = max(rec[c][0] for c in group)
+            pool = [r for r in left if rec[r["coach"]][0] == best]
+        pool = sorted(pool, key=lambda r: (-r["pf"], -r["pa"], r["coach"]))
+        if (len(pool) > 1 and
+                (pool[0]["pf"], pool[0]["pa"]) == (pool[1]["pf"], pool[1]["pa"])):
+            issues.append(f"{year}: {pool[0]['coach']} and {pool[1]['coach']} "
+                          f"need a coin flip - seeded alphabetically")
+        out.append(pool[0])
+        left.remove(pool[0])
+    return out
+
+
+def standings(teams, matchups, regular_weeks, rule, year, issues):
+    """Regular season table: win ratio, then `rule` (see TIEBREAK) for a tie.
+
+    Every tied row carries its record against the others in the tie, whichever
+    rule decides the order, so the table can show it.
     """
     rec = {c: {"coach": c, "team": t, "w": 0, "l": 0, "t": 0, "pf": 0.0,
                "pa": 0.0, "games": 0, "high": 0.0} for c, t in teams.items()}
@@ -245,8 +310,6 @@ def standings(teams, matchups, regular_weeks, head_to_head=True):
         r["pct"] = round((r["w"] + 0.5 * r["t"]) / r["games"], 4)
         table.append(r)
 
-    # Win ratio first; any tie is broken by the record among the tied teams,
-    # and then by points scored.
     table.sort(key=lambda r: -r["pct"])
     ordered = []
     i = 0
@@ -255,13 +318,16 @@ def standings(teams, matchups, regular_weeks, head_to_head=True):
         while j < len(table) and table[j]["pct"] == table[i]["pct"]:
             j += 1
         tied = table[i:j]
-        if len(tied) > 1 and head_to_head:
-            h2h = mini_league(regular, [r["coach"] for r in tied])
+        if len(tied) > 1:
+            h2h, _ = mini_league(regular, [r["coach"] for r in tied])
             for r in tied:
-                r["h2h"] = round(h2h[r["coach"]], 4)
-            tied.sort(key=lambda r: (-r["h2h"], -r["pf"]))
-        elif len(tied) > 1:
-            tied.sort(key=lambda r: -r["pf"])
+                r["h2hW"], r["h2hL"] = h2h[r["coach"]]
+            if rule == "group-wins":
+                tied.sort(key=lambda r: (-r["h2hW"], -r["pf"]))
+            elif rule == "group-ratio":
+                tied.sort(key=lambda r: (-group_ratio(r), -r["pf"]))
+            else:
+                tied = seed_nfl(tied, regular, year, issues)
         ordered.extend(tied)
         i = j
 
@@ -271,12 +337,92 @@ def standings(teams, matchups, regular_weeks, head_to_head=True):
 
 
 # --------------------------------------------------------------------------
+# power rankings
+# --------------------------------------------------------------------------
+
+def weekly_scores(matchups, regular_weeks):
+    """Every team's regular season score, with its weekly breakdown.
+
+    Breakdown is how many teams that score would have beaten that week: the
+    top score gets one less than the number of teams, the lowest gets 0. Equal
+    scores go to the coach later in the alphabet, as the commissioner's script
+    has it. Fortune is what the result made of that: a win with a low
+    breakdown is lucky (+), a loss with a high one unlucky (-).
+    """
+    rows = []
+    for m in matchups:
+        if m["week"] not in regular_weeks:
+            continue
+        for side, other in ((m["home"], m["away"]), (m["away"], m["home"])):
+            res = ("W" if side["points"] > other["points"] else
+                   "L" if side["points"] < other["points"] else "T")
+            rows.append({"week": m["week"], "coach": side["coach"],
+                         "opp": other["coach"], "result": res,
+                         "pts": side["points"], "game": m["id"]})
+    for wk in regular_weeks:
+        week = sorted((r for r in rows if r["week"] == wk),
+                      key=lambda r: (r["pts"], r["coach"]), reverse=True)
+        top = len(week) - 1
+        for i, r in enumerate(week):
+            r["breakdown"] = top - i
+            r["fortune"] = (top - r["breakdown"] if r["result"] == "W" else
+                            -r["breakdown"] if r["result"] == "L" else 0)
+    rows.sort(key=lambda r: (r["week"], -r["pts"], r["coach"]))
+    return rows
+
+
+def power_rankings(scores, upcoming, n_teams):
+    """PPG, consistency (standard deviation), average breakdown, strength of
+    schedule so far and for the rest of the season, and fortune.
+
+    Follows the commissioner's script, rounding included. Strength of schedule
+    is the average breakdown of the opponents faced, as a percentage of the
+    best possible; rest of season uses each remaining opponent's average.
+    """
+    weeks = len({r["week"] for r in scores})
+    if not weeks:
+        return [], None
+    top = n_teams - 1
+    mine, faced = defaultdict(list), defaultdict(list)
+    for r in scores:
+        mine[r["coach"]].append(r)
+        faced[r["opp"]].append(r)
+    avg_bd = {c: round(sum(x["breakdown"] for x in rs) / weeks, 1)
+              for c, rs in mine.items()}
+
+    rows = []
+    for c, rs in mine.items():
+        p = [x["pts"] for x in rs]
+        left = [b if a == c else a for _, a, b in upcoming if c in (a, b)]
+        ros = (round(round(sum(avg_bd.get(o, 0) for o in left) / len(left), 1)
+                     / top * 100) if left else 0)
+        sos = round(sum(x["breakdown"] for x in faced[c]) / weeks, 1)
+        rows.append({
+            "coach": c,
+            "ppg": round(mean(p), 2),
+            "consistency": round(stdev(p), 2) if len(p) > 1 else 0,
+            "breakdown": avg_bd[c],
+            "sos": round(sos / top * 100),
+            "ros": ros,
+            "fortune": sum(x["fortune"] for x in rs),
+        })
+    rows.sort(key=lambda r: (-r["ppg"], -r["breakdown"]))
+
+    def avg(k, nd):
+        return round(mean(r[k] for r in rows), nd or None)
+    average = {"ppg": avg("ppg", 1), "consistency": avg("consistency", 1),
+               "breakdown": avg("breakdown", 1), "sos": avg("sos", 0),
+               "ros": avg("ros", 0), "fortune": avg("fortune", 0)}
+    return rows, average
+
+
+# --------------------------------------------------------------------------
 # playoffs
 # --------------------------------------------------------------------------
 
 def championship_field(year, table):
     """Which coaches contested the title that season."""
-    size, rule = CHAMPIONSHIP_FORMAT[year]
+    size, rule = championship_format(year)
     size = min(size, len(table))
     if rule == "record":
         return [r["coach"] for r in table[:size]], None
@@ -335,6 +481,39 @@ def bracket_winner(matchups, playoff_weeks, field):
     a, b = final["home"], final["away"]
     win = a if a["points"] > b["points"] else b
     return win["coach"], final
+
+
+def first_round(order):
+    """Opening games for a bracket seeded in `order`.
+
+    Six teams: seeds 1 and 2 sit out, 4 v 5 feeds seed 1 and 3 v 6 feeds
+    seed 2 - the shape every six-team bracket since 2020 has followed. Four
+    teams: 1 v 4 and 2 v 3.
+    """
+    seed = lambda i: {"coach": order[i], "seed": i + 1}
+    if len(order) == 6:
+        return {"byes": [seed(0), seed(1)],
+                "games": [{"high": seed(3), "low": seed(4), "next": seed(0)},
+                          {"high": seed(2), "low": seed(5), "next": seed(1)}]}
+    if len(order) == 4:
+        return {"byes": [], "games": [{"high": seed(0), "low": seed(3)},
+                                      {"high": seed(1), "low": seed(2)}]}
+    return None
+
+
+def project_playoffs(table, field, wildcard, first_week):
+    """The playoff picture if the regular season ended today."""
+    rank = {r["coach"]: r["rank"] for r in table}
+    rest = [r["coach"] for r in table if r["coach"] not in set(field)]
+    champ = first_round(field)
+    cons = first_round(rest)
+    # Trash Bowl seeds read as standings places, not 1-4.
+    for g in (cons or {}).get("games", []):
+        for side in ("high", "low"):
+            g[side]["seed"] = rank[g[side]["coach"]]
+    return {"week": first_week, "championshipField": field,
+            "consolationField": rest, "wildcard": wildcard,
+            "championship": champ, "consolation": cons}
 
 
 # --------------------------------------------------------------------------
@@ -408,14 +587,33 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         })
     matchups.sort(key=lambda m: (m["week"], m["home"]["coach"]))
 
-    table = standings(teams, matchups, regular_weeks)
+    rule = tiebreak_rule(year)
+    table = standings(teams, matchups, regular_weeks, rule, year, issues)
 
-    wildcard = None
-    if "championshipField" in override:
+    size, fmt = championship_format(year)
+    if fmt == "wildcard":
+        # How far each team is above or below the points the wildcard holder
+        # has - the race for the last place.
+        line = max(r["pf"] for r in table[size - 1:])
+        for r in table:
+            r["wcGap"] = round(r["pf"] - line, 2)
+
+    derived_field, wildcard = championship_field(year, table)
+    projection = None
+    if override.get("inProgress"):
+        champ_field, cons_field = [], []
+        projection = project_playoffs(table, derived_field, wildcard,
+                                      override.get("playoffStart"))
+        wildcard = None
+    elif "championshipField" in override:
         champ_field = override["championshipField"]
         cons_field = override["consolationField"]
+        if set(champ_field) != set(derived_field):
+            issues.append(f"{year}: Sleeper's bracket is {sorted(champ_field)} "
+                          f"but the seeding gives {sorted(derived_field)}")
+            wildcard = None
     else:
-        champ_field, wildcard = championship_field(year, table)
+        champ_field = derived_field
         cons_field = [r["coach"] for r in table
                       if r["coach"] not in set(champ_field)]
         # Only coaches who actually played a playoff game are in the consolation.
@@ -467,6 +665,10 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         po[win["coach"]]["w"] += 1
         po[lose["coach"]]["l"] += 1
 
+    scores = weekly_scores(matchups, regular_weeks)
+    power, power_avg = power_rankings(scores, override.get("upcoming", []),
+                                      len(table))
+
     return {
         "year": year,
         "teams": teams,
@@ -482,6 +684,12 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         "inProgress": bool(override.get("inProgress")),
         "source": override.get("source", "csv"),
         "wildcard": wildcard,
+        "format": {"size": size, "rule": fmt},
+        "tiebreak": rule,
+        "projection": projection,
+        "scores": scores,
+        "power": power,
+        "powerAverage": power_avg,
         "playoffRecords": {c: dict(v) for c, v in po.items()},
         "draft": build_draft(drafts, year),
         "moves": build_moves(moves, year),
@@ -501,7 +709,16 @@ def build_draft(drafts, year):
                        "player": r["player"], "pos": r["pos"]}
                       for _, r in g.iterrows()],
         })
-    return {"order": [p["coach"] for p in rounds[0]["picks"]], "rounds": rounds}
+    order = [p["coach"] for p in rounds[0]["picks"]]
+    linear = year in LINEAR_DRAFTS
+    if linear:
+        # Every round in the first round's order.
+        for r in rounds:
+            for p in r["picks"]:
+                p["pick"] = (r["round"] - 1) * len(order) + order.index(p["coach"]) + 1
+            r["picks"].sort(key=lambda p: p["pick"])
+    return {"order": order, "style": "linear" if linear else "snake",
+            "rounds": rounds}
 
 
 def build_moves(moves, year):
@@ -613,9 +830,7 @@ def build_index(seasons):
             "consolationWinner": s["consolationWinner"],
             "regularWeeks": s["regularWeeks"],
             "playoffWeeks": s["playoffWeeks"],
-            "format": (CHAMPIONSHIP_FORMAT[s["year"]][0]
-                       if s["year"] in CHAMPIONSHIP_FORMAT
-                       else len(s["championshipField"]) or None),
+            "format": s["format"]["size"],
             "inProgress": s.get("inProgress", False),
             "source": s.get("source", "csv"),
         } for s in sorted(seasons.values(), key=lambda x: x["year"])],

@@ -267,6 +267,21 @@ def convert(year, bundle, uid2coach, players, issues):
                 return roster2coach.get(e["w"])
         return None
 
+    # Regular season fixtures not played yet, for rest-of-season schedule
+    # strength.
+    upcoming = []
+    for key, teams in bundle["matchups"].items():
+        wk = int(key)
+        if wk in weeks or wk >= playoff_start:
+            continue
+        by_matchup = defaultdict(list)
+        for t in teams:
+            if t.get("matchup_id") is not None:
+                by_matchup[t["matchup_id"]].append(roster2coach.get(t["roster_id"]))
+        for pair in by_matchup.values():
+            if len(pair) == 2 and all(pair):
+                upcoming.append((wk, *pair))
+
     wb, lb = bundle.get("winners_bracket"), bundle.get("losers_bracket")
     complete = league.get("status") == "complete"
 
@@ -277,6 +292,8 @@ def convert(year, bundle, uid2coach, players, issues):
     override = {
         "playoffWeeks": playoff_weeks,
         "regularWeeks": regular_weeks,
+        "playoffStart": playoff_start,
+        "upcoming": sorted(upcoming),
         "championshipField": bracket_field(wb) if complete else [],
         "consolationField": bracket_field(lb) if complete else [],
         "champion": bracket_winner(wb) if complete else None,
