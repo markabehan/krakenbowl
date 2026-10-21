@@ -47,6 +47,46 @@ const HEAT_KEY = `<span class="k heatkey">Hurts
   <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
   Helps</span>`;
 
+/* Click-to-sort for any <table class="sortable">. A cell sorts on its
+   data-v when it has one (a record sorts by win %, a coach by name), else on
+   its text read as a number. Numbers sort high-first on the first click and
+   names A-Z; a second click reverses. Blank cells always go last. The #
+   column keeps each row's own rank, so sorting on it restores the order. */
+function wireSort(root) {
+  for (const table of root.querySelectorAll('table.sortable')) {
+    const heads = [...table.tHead.rows[0].cells];
+    const body = table.tBodies[0];
+    heads.forEach((th, i) => {
+      th.innerHTML = `<button type="button" class="sorthead">${th.innerHTML}</button>`;
+      th.querySelector('button').addEventListener('click', () => {
+        const rows = [...body.rows];
+        const val = tr => {
+          const td = tr.cells[i];
+          const raw = td.dataset.v !== undefined ? td.dataset.v : td.textContent.trim();
+          if (raw === '' || raw === '—') return null;
+          const n = Number(String(raw).replace(/[+,%]/g, ''));
+          return Number.isNaN(n) ? String(raw).toLowerCase() : n;
+        };
+        const sample = rows.map(val).find(v => v !== null);
+        const numeric = typeof sample === 'number';
+        // The rank column reads best-first ascending; other numbers high-first.
+        const natural = numeric && !th.classList.contains('rank') ? 'descending' : 'ascending';
+        const dir = th.getAttribute('aria-sort') === natural
+          ? (natural === 'ascending' ? 'descending' : 'ascending') : natural;
+        const sign = dir === 'ascending' ? 1 : -1;
+        rows.sort((a, b) => {
+          const x = val(a), y = val(b);
+          if (x === null || y === null) return (x === null) - (y === null);
+          return (x < y ? -1 : x > y ? 1 : 0) * sign;
+        });
+        heads.forEach(h => h.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort', dir);
+        body.append(...rows);
+      });
+    });
+  }
+}
+
 async function getSeason(year) {
   if (!seasonCache.has(year)) {
     const res = await fetch(`data/season-${year}.json`);
@@ -294,6 +334,7 @@ async function renderSeason(year, sub, params) {
   }[sub] || viewStandings;
 
   view.innerHTML = years + banner + subnav + body(s, params);
+  wireSort(view);
   if (sub === 'matches') wireMatchFilters(s);
   if (sub === 'moves') wireMoveFilters(s);
   if (sub === 'weekly') wireFilters(s, 'weekly', { sw: 'week' });
@@ -318,21 +359,28 @@ function viewStandings(s) {
   const champ = new Set(proj ? proj.championshipField : s.championshipField);
   const wildcard = proj ? proj.wildcard : s.wildcard;
   const wc = s.format && s.format.rule === 'wildcard';
+  // Heat map: record against .500 and the points difference against zero;
+  // the points columns against the league average. Points against is what
+  // opponents scored, so lower helps.
+  const col = (k, dir, mid) => heatScale(s.standings.map(r => r[k]), dir, mid);
+  const H = { pct: col('pct', 1, 0.5), pf: col('pf', 1), pa: col('pa', -1),
+              diff: col('diff', 1, 0), ppg: col('ppg', 1), high: col('high', 1) };
   const rows = s.standings.map(r => `<tr${champ.has(r.coach) ? ' class="inplayoffs"' : ''}>
     <td class="rank">${r.rank}</td>
-    <td class="col-name">
+    <td class="col-name" data-v="${esc(r.coach)}">
       <a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>${
         r.coach === wildcard ? ' <span class="tag">Wildcard</span>' : ''}
       <span class="teamname">${esc(r.team)}</span>
     </td>
-    <td class="rec">${rec(r)}</td>
-    <td class="rec muted">${r.h2hW !== undefined ? `${r.h2hW}-${r.h2hL}` : ''}</td>
-    <td class="num">${pts(r.pf)}</td>
-    <td class="num">${pts(r.pa)}</td>
-    <td class="num">${signed(r.diff)}</td>
-    ${wc ? `<td class="num">${r.wcGap === 0 ? '&mdash;' : signed(r.wcGap)}</td>` : ''}
-    <td class="num">${pts(r.ppg)}</td>
-    <td class="num">${pts(r.high)}</td>
+    <td class="rec${H.pct.cls(r.pct)}" data-v="${r.pct}">${rec(r)}</td>
+    <td class="rec muted" data-v="${r.h2hW !== undefined ? r.h2hW * 1000 - r.h2hL : ''}">${
+      r.h2hW !== undefined ? `${r.h2hW}-${r.h2hL}` : ''}</td>
+    <td class="num${H.pf.cls(r.pf)}" data-v="${r.pf}">${pts(r.pf)}</td>
+    <td class="num${H.pa.cls(r.pa)}" data-v="${r.pa}">${pts(r.pa)}</td>
+    <td class="num${H.diff.cls(r.diff)}" data-v="${r.diff}">${signed(r.diff)}</td>
+    ${wc ? `<td class="num" data-v="${r.wcGap}">${r.wcGap === 0 ? '&mdash;' : signed(r.wcGap)}</td>` : ''}
+    <td class="num${H.ppg.cls(r.ppg)}" data-v="${r.ppg}">${pts(r.ppg)}</td>
+    <td class="num${H.high.cls(r.high)}" data-v="${r.high}">${pts(r.high)}</td>
   </tr>`).join('');
 
   const wk = s.regularWeeks;
@@ -354,7 +402,7 @@ function viewStandings(s) {
       <p>Regular season, weeks ${wk[0]}&ndash;${wk[wk.length - 1]}. Ranked by win ratio.
          ${TIEBREAKS[s.tiebreak] || ''} ${marked}${wild}</p>
     </div>
-    <div class="tablecard"><div class="tscroll"><table>
+    <div class="tablecard"><div class="tscroll"><table class="sortable">
       <thead><tr>
         <th class="rank">#</th><th class="col-name">Coach</th>
         <th>Record</th><th title="Record in games among teams tied on win ratio">Tied&nbsp;H2H</th>
@@ -365,6 +413,10 @@ function viewStandings(s) {
       <tbody>${rows}</tbody>
     </table></div></div>
     <div class="legend">
+      ${HEAT_KEY}
+      <span class="k">Record is shaded against .500 and Diff against zero; the points
+        columns against the league average, where lower PA helps</span>
+      <span class="k">Click a column heading to sort</span>
       <span class="k">Tied H2H: record against the other teams on the same win ratio</span>
       ${wc ? '<span class="k">vs WC: points for, compared with the wildcard holder</span>' : ''}
     </div>`;
@@ -513,7 +565,7 @@ function viewPower(s) {
     ${heat(r, 'fortune', signed(r.fortune, String))}`;
   const rows = s.power.map((r, i) => `<tr>
     <td class="rank">${i + 1}</td>
-    <td class="col-name"><a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
+    <td class="col-name" data-v="${esc(r.coach)}"><a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
       <span class="teamname">${esc(s.teams[r.coach])}</span></td>
     ${cells(r)}</tr>`).join('');
   const a = s.powerAverage;
@@ -530,7 +582,7 @@ function viewPower(s) {
            : ''}. <strong>Fortune</strong> adds up how lucky the results were: a win with a
          low breakdown counts up, a loss with a high one counts down.</p>
     </div>
-    <div class="tablecard"><div class="tscroll"><table>
+    <div class="tablecard"><div class="tscroll"><table class="sortable">
       <thead><tr>
         <th class="rank">#</th><th class="col-name">Coach</th>
         <th>PPG</th><th>Consistency</th><th>Breakdown</th><th>SoS</th>
@@ -548,7 +600,8 @@ function viewPower(s) {
         and SoS help: steadier scoring and easier opponents.</span>
     </div>
     <div class="legend"><span class="k">Consistency is the standard deviation of weekly
-      scores &mdash; lower is steadier</span></div>`;
+      scores &mdash; lower is steadier</span>
+      <span class="k">Click a column heading to sort</span></div>`;
 }
 
 /* ---------- season: grades ---------- */
