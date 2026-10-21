@@ -64,9 +64,9 @@ CHAMPIONSHIP_FORMAT = {
 #                  ratio - the results can't separate them); NFL.com's published
 #                  sequence contradicts 2017, 2021 and 2024.
 #   "group-ratio"  record among the tied teams as a win ratio, then points.
-#                  The commissioner's seeding script, used for 2025.
+#                  The commissioner's seeding script, used for 2025 and 2026.
 #   "nfl"          NFL.com's published sequence - see seed_nfl. Not in use.
-TIEBREAK = {2025: "group-ratio"}
+TIEBREAK = {2025: "group-ratio", 2026: "group-ratio"}
 
 
 def tiebreak_rule(year):
