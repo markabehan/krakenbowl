@@ -154,8 +154,8 @@ season (`TIEBREAK` in `build.py`):
 
 | Seasons | Tie on win ratio |
 | --- | --- |
-| 2015–2024, 2027– | most **wins** in games among the tied teams, then the **fewest losses** in those games, then points scored |
-| 2025–2026 | best **win ratio** in games among the tied teams, then points scored (the commissioner's seeding script) |
+| 2015–2024 | most **wins** in games among the tied teams, then the **fewest losses** in those games, then points scored |
+| 2025– | best **win ratio** in games among the tied teams, then points scored (the commissioner's seeding script) |
 
 For three or more teams the record is the one inside the tied group, because
 pairwise results can form a loop.

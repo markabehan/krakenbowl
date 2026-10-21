@@ -30,9 +30,9 @@ These catch real bugs. Several below were found exactly this way.
 ## League format
 
 Seeding: win ratio, then a tiebreak that depends on the season (`TIEBREAK`
-in `build.py`): 2025 and 2026 use win ratio among the tied teams then points
-(the commissioner's script); every other season uses wins among the tied
-teams, then fewest losses among them, then points. NFL.com's rules
+in `build.py`): 2025 onward uses win ratio among the tied teams then points
+(the commissioner's script); 2015-2024 use wins among the tied teams, then
+fewest losses among them, then points. NFL.com's rules
 (`seed_nfl`, unused) do **not** reproduce the 2017, 2021 or 2024 brackets
 that were played, so don't apply them to old seasons. From 2023 the sixth place is a wildcard: highest scorer outside the
 top five.

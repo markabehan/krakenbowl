@@ -59,18 +59,21 @@ CHAMPIONSHIP_FORMAT = {
 
 # How a tie on win ratio is broken.
 #   "group-record" record among the tied teams: most wins, then fewest
-#                  losses, then points. The default. Every bracket played on the
-#                  old platform, 2015-2024, fits it (so do plain wins and win
-#                  ratio - the results can't separate them); NFL.com's published
+#                  losses, then points. The old platform, 2015-2024: every
+#                  bracket played there fits it (so do plain wins and win ratio
+#                  - the results can't separate them); NFL.com's published
 #                  sequence contradicts 2017, 2021 and 2024.
 #   "group-ratio"  record among the tied teams as a win ratio, then points.
-#                  The commissioner's seeding script, used for 2025 and 2026.
+#                  The commissioner's seeding script: 2025 onward.
 #   "nfl"          NFL.com's published sequence - see seed_nfl. Not in use.
-TIEBREAK = {2025: "group-ratio", 2026: "group-ratio"}
+# A season listed in TIEBREAK overrides the default for its era.
+TIEBREAK = {}
 
 
 def tiebreak_rule(year):
-    return TIEBREAK.get(year, "group-record")
+    if year in TIEBREAK:
+        return TIEBREAK[year]
+    return "group-record" if year < 2025 else "group-ratio"
 
 
 def championship_format(year):
