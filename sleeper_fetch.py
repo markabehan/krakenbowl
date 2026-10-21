@@ -22,12 +22,16 @@ import urllib.request
 from pathlib import Path
 
 API = "https://api.sleeper.app/v1"
+# Weekly player stats. Not part of Sleeper's documented API, but it is what the
+# Sleeper app itself uses, and each row carries the NFL team the player was on
+# that week - unlike the player directory, which only knows today's team.
+STATS = "https://api.sleeper.com/stats/nfl"
 PAUSE = 0.12          # ~8 calls/sec, far below Sleeper's 1000/min guidance
 MAX_WEEK = 18         # fetch through week 18 and ignore whatever is empty
 
 
-def get(path, required=True):
-    url = f"{API}/{path}"
+def get(path, required=True, base=API):
+    url = f"{base}/{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "record-book/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
@@ -86,10 +90,32 @@ def fetch_season(league_id, out):
     print(f"    drafts: {len(bundle['drafts'])}  "
           f"picks: {sum(len(x['picks']) for x in bundle['drafts'])}")
 
+    bundle["player_teams"] = fetch_player_teams(
+        season, sorted(matchups, key=int), referenced_player_ids([bundle]))
+    print(f"    weeks with NFL teams: {len(bundle['player_teams'])}")
+
     size = save(d / "league.json", bundle)
     print(f"    saved {d/'league.json'}  ({size/1024:.0f} KB)")
 
     return league.get("previous_league_id"), bundle
+
+
+def fetch_player_teams(season, weeks, ids):
+    """{week: {player_id: NFL team}} for the players this league used.
+
+    Players with no game that week (byes, injuries) have no row; sleeper.py
+    falls back to their nearest week. Weeks not yet played come back empty and
+    are left out.
+    """
+    out = {}
+    for wk in weeks:
+        rows = get(f"{season}/{wk}?season_type=regular", required=False,
+                   base=STATS) or []
+        teams = {str(r["player_id"]): r["team"] for r in rows
+                 if r.get("team") and str(r.get("player_id")) in ids}
+        if teams:
+            out[wk] = teams
+    return out
 
 
 def referenced_player_ids(bundles):

@@ -76,6 +76,10 @@ Sleeper's own points-only one.
   and pre-fills the bracket from current standings. Only weeks with both a
   fixture and a score count, and the projected bracket is ignored entirely,
   so an unfinished season contributes no playoff appearances or winners.
+- **Sleeper's player directory has today's NFL team**, not the one a player
+  had that week. Box scores take the team from `player_teams` in each season's
+  `league.json` (weekly stats, see README); never fall back to
+  `players.json`'s team where a weekly one exists. The team is display-only.
 
 ## Adding a season
 

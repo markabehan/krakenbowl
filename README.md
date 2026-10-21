@@ -79,6 +79,16 @@ and collects every Sleeper season by itself. It writes `raw/sleeper/<season>/`
 and trims Sleeper's 10MB player directory down to the few hundred players this
 league actually used.
 
+The directory only knows each player's team *today*, so it is not where box
+scores get their NFL team. Each season's `league.json` also carries
+`player_teams` (week -> player id -> team), taken from Sleeper's weekly stats
+(`api.sleeper.com/stats/nfl/<season>/<week>`, undocumented but what Sleeper's
+own app uses). A player with no game that week (bye, injury) takes his nearest
+earlier week, then his nearest later one; only a player with no stats row all
+season falls back to the directory. Adds, drops and trades use the week they
+happened. Re-fetching a finished season gives the same map, so a refresh no
+longer moves old box scores to players' new teams.
+
 Note the fetch has to run somewhere with normal internet access. It will not
 work from inside a sandboxed or proxied environment, where `api.sleeper.app`
 is typically blocked.
