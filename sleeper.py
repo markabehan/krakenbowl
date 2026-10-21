@@ -135,10 +135,26 @@ def convert(year, bundle, uid2coach, players, issues):
     playoff_weeks = [w for w in weeks if w >= playoff_start]
     regular_weeks = [w for w in weeks if w < playoff_start]
 
-    def pname(pid):
+    # The NFL team each player was on, week by week (sleeper_fetch.py). A
+    # player with no game that week takes his nearest week, earlier first.
+    # The directory's team is today's, so it is only the last resort.
+    team_weeks = defaultdict(dict)
+    for wk, teams in (bundle.get("player_teams") or {}).items():
+        for pid, nfl in teams.items():
+            team_weeks[pid][int(wk)] = nfl
+
+    def team_at(pid, wk):
+        seen = team_weeks.get(str(pid))
+        if not seen or wk is None:
+            return None
+        earlier = [w for w in seen if w <= wk]
+        return seen[max(earlier)] if earlier else seen[min(seen)]
+
+    def pname(pid, wk=None):
         p = players.get(str(pid))
         if p:
-            return p.get("name") or str(pid), p.get("pos"), p.get("team")
+            return (p.get("name") or str(pid), p.get("pos"),
+                    team_at(pid, wk) or p.get("team"))
         # Team defences are keyed by their abbreviation.
         if isinstance(pid, str) and pid.isalpha() and len(pid) <= 4:
             return pid, "DEF", pid
@@ -169,7 +185,7 @@ def convert(year, bundle, uid2coach, players, issues):
 
             for i, pid in enumerate(starters):
                 slot = slots[i] if i < len(slots) else f"S{i+1}"
-                name, pos, nfl = pname(pid)
+                name, pos, nfl = pname(pid, wk)
                 gameweeks.append({
                     "Year": year, "Week": wk, "Coach": coach, "Opponent": opp,
                     "Slot": slot, "Bench": "", "Position": pos or "",
@@ -180,7 +196,7 @@ def convert(year, bundle, uid2coach, players, issues):
 
             bench = [p for p in (t.get("players") or []) if p not in set(starters)]
             for i, pid in enumerate(bench):
-                name, pos, nfl = pname(pid)
+                name, pos, nfl = pname(pid, wk)
                 gameweeks.append({
                     "Year": year, "Week": wk, "Coach": coach, "Opponent": opp,
                     "Slot": f"BN{i+1}", "Bench": "BN", "Position": pos or "",
@@ -219,7 +235,7 @@ def convert(year, bundle, uid2coach, players, issues):
             if kind == "trade":
                 drops = t.get("drops") or {}
                 for pid, to_roster in (t.get("adds") or {}).items():
-                    name, pos, nfl = pname(pid)
+                    name, pos, nfl = pname(pid, leg)
                     trades.append({
                         "Season": year, "week": leg,
                         "Time": t.get("transaction_id"),
@@ -235,7 +251,7 @@ def convert(year, bundle, uid2coach, players, issues):
                    "commissioner": "Commissioner"}.get(kind, kind.title())
             bid = (t.get("settings") or {}).get("waiver_bid")
             for pid, roster in (t.get("adds") or {}).items():
-                name, pos, nfl = pname(pid)
+                name, pos, nfl = pname(pid, leg)
                 moves.append({
                     "Season": year, "week": leg,
                     "coach": roster2coach.get(roster, ""), "Add/Drop": "Add",
@@ -243,7 +259,7 @@ def convert(year, bundle, uid2coach, players, issues):
                     "Franchise": nfl or "", "FAAB": "" if bid is None else str(bid),
                 })
             for pid, roster in (t.get("drops") or {}).items():
-                name, pos, nfl = pname(pid)
+                name, pos, nfl = pname(pid, leg)
                 moves.append({
                     "Season": year, "week": leg,
                     "coach": roster2coach.get(roster, ""), "Add/Drop": "Drop",
