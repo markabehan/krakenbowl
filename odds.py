@@ -23,7 +23,8 @@ CHUNK = 1 << 15             # combinations ranked at a time
 
 
 def playoff_odds(standings, regular, upcoming, rule, fmt):
-    """Odds of each finishing place, of a bye and of the playoffs.
+    """Odds of each standings place, of an automatic playoff place (the top
+    five in a wildcard season), of the wildcard and of a bye.
 
     `regular` is the regular season games played so far, `upcoming` the
     fixtures still to come as (week, coach, coach). Returns None when there
@@ -63,8 +64,9 @@ def playoff_odds(standings, regular, upcoming, rule, fmt):
         first[k, a] = second[k, b] = 1
         beat_ab[k, a * n + b] = beat_ba[k, b * n + a] = 1
 
-    seeds = np.zeros((n, size), dtype=np.int64)    # coach x bracket seed
-    playoffs = np.zeros(n, dtype=np.int64)
+    places = np.zeros((n, n), dtype=np.int64)      # coach x standings place
+    top = np.zeros(n, dtype=np.int64)              # an automatic place
+    wilds = np.zeros(n, dtype=np.int64)            # the wildcard
     byes = np.zeros(n, dtype=np.int64)
     rng = np.random.default_rng(2026)
     shift = np.arange(g, dtype=np.uint64)
@@ -95,28 +97,26 @@ def playoff_odds(standings, regular, upcoming, rule, fmt):
             keys = (np.broadcast_to(-pf, s.shape), hl, -hw, -s)
         order = np.lexsort(keys, axis=1)            # order[:, k] = place k+1
 
-        # Bracket seeds: straight down the standings, except that with a
-        # wildcard the last seed is the highest scorer outside the top five.
+        np.add.at(places, (order.ravel(), np.tile(cols, m)), 1)
+        # The automatic places: the top five when the last place is a
+        # wildcard, else the whole bracket. The wildcard is the highest
+        # scorer outside the top five.
+        auto = size - 1 if kind == "wildcard" else size
+        np.add.at(top, order[:, :auto].ravel(), 1)
         if kind == "wildcard":
-            rest = order[:, size - 1:]
-            wild = rest[np.arange(m), np.argmax(pf[rest], axis=1)]
-            bracket = np.concatenate([order[:, :size - 1], wild[:, None]], axis=1)
-        else:
-            bracket = order[:, :size]
-        np.add.at(seeds, (bracket.ravel(), np.tile(cols[:size], m)), 1)
-        np.add.at(playoffs, bracket.ravel(), 1)
+            rest = order[:, auto:]
+            np.add.at(wilds, rest[np.arange(m), np.argmax(pf[rest], axis=1)], 1)
         if size == 6:
             np.add.at(byes, order[:, :2].ravel(), 1)
 
     pct = lambda x: round(100 * float(x) / total, 1)
     rows = [{"coach": c,
-             "seeds": [pct(v) for v in seeds[i]],
-             "out": pct(total - playoffs[i]),
-             "playoffs": pct(playoffs[i]),
+             "places": [pct(v) for v in places[i]],
+             "top": pct(top[i]),
+             "wildcard": pct(wilds[i]) if kind == "wildcard" else None,
              "bye": pct(byes[i]) if size == 6 else None}
             for i, c in enumerate(coaches)]
-    # Likeliest top seed first; teams with no seed chance in standings order.
-    rows.sort(key=lambda r: [-p for p in r["seeds"]] + [r["out"]])
+    rows.sort(key=lambda r: [-p for p in r["places"]])
     return {"rows": rows, "games": g, "weeks": sorted({w for w, _, _ in upcoming}),
             "outcomes": total, "exhaustive": exhaustive,
-            "wildcard": kind == "wildcard"}
+            "auto": size - 1 if kind == "wildcard" else size}

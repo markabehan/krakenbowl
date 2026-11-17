@@ -544,7 +544,7 @@ function viewPlayoffs(s) {
 
 function viewOdds(s) {
   const o = s.odds;
-  const wild = o.wildcard;
+  const wild = o.rows.some(r => r.wildcard !== null);
   const rec2 = Object.fromEntries(s.standings.map(r => [r.coach, r]));
   // Magnitude, so one hue: deeper blue = likelier.
   const shade = v => v <= 0 ? '' : v < 10 ? ' heat-up1' : v < 35 ? ' heat-up2'
@@ -558,14 +558,11 @@ function viewOdds(s) {
       <a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
       <span class="teamname">${esc(s.teams[r.coach])}</span></td>
     <td class="rec" data-v="${rec2[r.coach].pct}">${rec(rec2[r.coach])}</td>
-    ${cell(r.playoffs)}${hasBye ? cell(r.bye) : ''}
-    ${r.seeds.map(cell).join('')}${cell(r.out)}
+    ${cell(r.top)}${wild ? cell(r.wildcard) : ''}${hasBye ? cell(r.bye) : ''}
+    ${r.places.map(cell).join('')}
   </tr>`).join('');
-  const seedHeads = r0 => r0.seeds.map((_, k) => {
-    const last = k === r0.seeds.length - 1 && o.wildcard;
-    return `<th class="inbracket"${last ? ' title="Wildcard: highest scorer outside the top five"' : ''}>${
-      ordinal(k + 1)}${last ? '&nbsp;WC' : ''}</th>`;
-  }).join('') + '<th>Out</th>';
+  const placeHeads = o.rows[0].places.map((_, k) =>
+    `<th${k < o.auto ? ' class="inbracket"' : ''}>${ordinal(k + 1)}</th>`).join('');
   const weeks = o.weeks.length > 1
     ? `weeks ${o.weeks[0]}&ndash;${o.weeks[o.weeks.length - 1]}` : `week ${o.weeks[0]}`;
 
@@ -579,14 +576,17 @@ function viewOdds(s) {
            : `a fixed sample of ${o.outcomes.toLocaleString()} combinations played out (too many to list them all)`}.
          Each one is ranked as the league seeds: record, then ${s.tiebreak === 'group-ratio'
            ? 'win ratio among the tied teams' : 'record among the tied teams'}, then points for.
-         The figures are the share of outcomes in which each coach gets each playoff seed.
-         ${wild ? `Seeds 1&ndash;5 go to the top five on record; the 6th seed is the wildcard,
-         the highest scorer of the other five.` : ''}</p>
+         The figures are the share of outcomes in which each coach finishes in each place.
+         <strong>Top ${o.auto}</strong> is the chance of an automatic playoff place${wild
+           ? `; <strong>Wild card</strong> is the chance of the last one, which goes to the
+              highest scorer of the other five` : ''}.</p>
     </div>
     <div class="tablecard"><div class="tscroll"><table class="sortable odds">
       <thead><tr>
         <th class="rank">#</th><th class="col-name">Coach</th><th>Record</th>
-        <th>Playoffs</th>${hasBye ? '<th>Bye</th>' : ''}${seedHeads(o.rows[0])}
+        <th>Top&nbsp;${o.auto}</th>${wild
+          ? '<th title="Highest scorer outside the top five">Wild&nbsp;card</th>' : ''}${
+          hasBye ? '<th>Bye</th>' : ''}${placeHeads}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div></div>
@@ -594,7 +594,8 @@ function viewOdds(s) {
       <span class="k heatkey">Less likely
         <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
         More likely</span>
-      <span class="k">Percentages. The seeds add up to Playoffs; Out is the rest.
+      <span class="k">Percentages. Places are standings places by record; Top ${o.auto}
+        adds up places 1&ndash;${o.auto}${wild ? `, and Top ${o.auto} plus Wild card is the chance of the playoffs` : ''}.
         Click a heading to sort.</span>
     </div>
     <p class="sectnote" style="margin-top:1rem"><strong>Points are frozen</strong> at what each
