@@ -28,6 +28,7 @@ from statistics import mean, stdev
 import pandas as pd
 
 import grading
+import odds
 import sleeper
 
 ROOT = Path(__file__).parent
@@ -673,6 +674,14 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
     power, power_avg = power_rankings(scores, override.get("upcoming", []),
                                       len(table))
 
+    # Finishing-place odds, only while regular season games remain; once
+    # the playoffs start there is nothing left to play out.
+    finish_odds = None
+    if override.get("inProgress"):
+        finish_odds = odds.playoff_odds(
+            table, [m for m in matchups if m["week"] in regular_weeks],
+            override.get("upcoming", []), rule, (size, fmt))
+
     return {
         "year": year,
         "teams": teams,
@@ -694,6 +703,7 @@ def build_season(year, gw, drafts, moves, trades, team_of, issues, override=None
         "scores": scores,
         "power": power,
         "powerAverage": power_avg,
+        "odds": finish_odds,
         "playoffRecords": {c: dict(v) for c, v in po.items()},
         "draft": build_draft(drafts, year),
         "moves": build_moves(moves, year),

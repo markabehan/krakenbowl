@@ -414,3 +414,8 @@ th[aria-sort] .sorthead{color:var(--amber)}
 th[aria-sort] .sorthead::after{opacity:1}
 th[aria-sort="ascending"] .sorthead::after{border-top-color:transparent;
   border-bottom-color:currentColor;margin-top:-4px}
+
+/* finishing odds */
+table.odds th,table.odds td{padding-left:.45rem;padding-right:.45rem}
+table.odds th.inbracket .sorthead{color:var(--amber)}
+table.odds th.inbracket[aria-sort] .sorthead{color:var(--text)}

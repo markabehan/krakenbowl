@@ -294,8 +294,8 @@ function renderOverall(params) {
 /* ---------- season shell ---------- */
 
 const SEASON_VIEWS = [
-  ['standings', 'Standings'], ['playoffs', 'Playoffs'], ['power', 'Power rankings'],
-  ['grades', 'Grades'],
+  ['standings', 'Standings'], ['playoffs', 'Playoffs'], ['odds', 'Odds'],
+  ['power', 'Power rankings'], ['grades', 'Grades'],
   ['matches', 'Matches'], ['weekly', 'Highest weekly'], ['overall', 'Highest overall'],
   ['draft', 'Draft'], ['moves', 'Adds &amp; drops'], ['trades', 'Trades'],
 ];
@@ -308,7 +308,11 @@ async function renderSeason(year, sub, params) {
     `<a href="#/season/${x.year}/${sub}"${x.year === year ? ' aria-current="page"' : ''}>${x.year}</a>`
   ).join('') + `</nav>`;
 
-  const subnav = `<nav class="pills subnav" aria-label="Season view">` + SEASON_VIEWS.map(([k, label]) =>
+  // The Odds tab only exists while regular season games remain; a season
+  // without odds (finished, or into its playoffs) shows its standings instead.
+  if (sub === 'odds' && !s.odds) sub = 'standings';
+  const views = SEASON_VIEWS.filter(([k]) => k !== 'odds' || s.odds);
+  const subnav = `<nav class="pills subnav" aria-label="Season view">` + views.map(([k, label]) =>
     `<a href="#/season/${year}/${k}"${k === sub ? ' aria-current="page"' : ''}>${label}</a>`
   ).join('') + `</nav>`;
 
@@ -328,7 +332,8 @@ async function renderSeason(year, sub, params) {
     </div>`;
 
   const body = {
-    standings: viewStandings, playoffs: viewPlayoffs, power: viewPower, grades: viewGrades,
+    standings: viewStandings, playoffs: viewPlayoffs, odds: viewOdds,
+    power: viewPower, grades: viewGrades,
     matches: viewMatches, weekly: viewWeekly, overall: viewOverall,
     draft: viewDraft, moves: viewMoves, trades: viewTrades,
   }[sub] || viewStandings;
@@ -533,6 +538,68 @@ function viewPlayoffs(s) {
       <h2><span class="dot-s"></span> Trash Bowl</h2>
       ${groupByWeek(cons)}
     </div>` : ''}`;
+}
+
+/* ---------- season: finishing odds ---------- */
+
+function viewOdds(s) {
+  const o = s.odds;
+  const n = s.standings.length;
+  const size = s.format ? s.format.size : 6;
+  const wild = s.format && s.format.rule === 'wildcard';
+  const rec2 = Object.fromEntries(s.standings.map(r => [r.coach, r]));
+  // Magnitude, so one hue: deeper blue = likelier.
+  const shade = v => v <= 0 ? '' : v < 10 ? ' heat-up1' : v < 35 ? ' heat-up2'
+    : v < 65 ? ' heat-up3' : ' heat-up4';
+  const cell = v => `<td class="num${shade(v)}" data-v="${v}">${v > 0 ? v.toFixed(1) : '&ndash;'}</td>`;
+  const hasBye = o.rows.some(r => r.bye !== null);
+
+  const rows = o.rows.map((r, i) => `<tr>
+    <td class="rank">${i + 1}</td>
+    <td class="col-name" data-v="${esc(r.coach)}">
+      <a class="coachname" href="#/coach/${slug(r.coach)}">${esc(r.coach)}</a>
+      <span class="teamname">${esc(s.teams[r.coach])}</span></td>
+    <td class="rec" data-v="${rec2[r.coach].pct}">${rec(rec2[r.coach])}</td>
+    ${cell(r.playoffs)}${hasBye ? cell(r.bye) : ''}
+    ${r.places.map(cell).join('')}
+  </tr>`).join('');
+  const placeHeads = Array.from({ length: n }, (_, k) =>
+    `<th${k < size ? ' class="inbracket"' : ''}>${ordinal(k + 1)}</th>`).join('');
+  const weeks = o.weeks.length > 1
+    ? `weeks ${o.weeks[0]}&ndash;${o.weeks[o.weeks.length - 1]}` : `week ${o.weeks[0]}`;
+
+  return `
+    <div class="pagehead">
+      <p class="eyebrow">Season ${s.year} &middot; through week ${s.regularWeeks[s.regularWeeks.length - 1]}</p>
+      <h1>Finishing odds</h1>
+      <p>Every remaining regular season game (${o.games}, ${weeks}) treated as a coin flip,
+         and ${o.exhaustive
+           ? `all ${o.outcomes.toLocaleString()} possible combinations of results played out`
+           : `a fixed sample of ${o.outcomes.toLocaleString()} combinations played out (too many to list them all)`}.
+         Each one is ranked as the league seeds: record, then ${s.tiebreak === 'group-ratio'
+           ? 'win ratio among the tied teams' : 'record among the tied teams'}, then points for.
+         The figures are the share of outcomes in which each coach finishes in each place.</p>
+    </div>
+    <div class="tablecard"><div class="tscroll"><table class="sortable odds">
+      <thead><tr>
+        <th class="rank">#</th><th class="col-name">Coach</th><th>Record</th>
+        <th>Playoffs</th>${hasBye ? '<th>Bye</th>' : ''}${placeHeads}
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div></div>
+    <div class="legend">
+      <span class="k heatkey">Less likely
+        <span class="heat-up1"></span><span class="heat-up2"></span><span class="heat-up3"></span><span class="heat-up4"></span>
+        More likely</span>
+      <span class="k">Percentages; places are standings places by record${wild
+        ? ', and Playoffs counts the wildcard too' : ''}. Click a heading to sort.</span>
+    </div>
+    <p class="sectnote" style="margin-top:1rem"><strong>Points are frozen</strong> at what each
+      team has scored so far, because the future scores aren't known. That only matters where
+      points decide something: a tie on record and the head-to-head ratio${wild
+        ? `, and the wildcard, the highest scorer outside the top five. A team well clear on
+           points takes the wildcard in nearly every outcome here, though four weeks of scoring
+           could still change that` : ''}. This tab disappears once the playoffs start.</p>`;
 }
 
 /* ---------- season: power rankings ---------- */

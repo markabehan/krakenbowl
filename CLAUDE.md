@@ -104,6 +104,15 @@ Don't upload files through the GitHub web UI. Doing that alongside local
 commits forks the history, which has already happened once and needed a merge
 to untangle.
 
+## Odds
+
+`odds.py` plays out every remaining regular season result as a coin flip,
+as the commissioner's `permutations.py` does, for the season in progress
+only; it matches his 2025 week 14 output exactly. Points for are frozen, so
+the wildcard goes to whoever is clear on points so far - say so rather than
+"fix" it. With four weeks left (2^20 outcomes) it adds about 20 seconds to the
+build; more than 22 games left falls back to a fixed sample.
+
 ## Grades
 
 `grading.py` builds lineup efficiency, all-play luck and draft outcome grades

@@ -120,6 +120,7 @@ old `W/R` and `W/T`, and both eras run ten starters and six bench.
 ```
 build.py              CSVs -> JSON
 grading.py            season grades and all-time records (see GRADING.md)
+odds.py               finishing-place odds for the season in progress
 sleeper.py            Sleeper API dumps -> the same shape as the CSVs
 raw/                  the source CSVs
 docs/
@@ -193,6 +194,15 @@ The export numbers 2015 and 2017 as if they snaked, so the build renumbers
 today: the qualifying teams are marked in the standings, and the Playoffs tab
 shows the first-round games (4 v 5 feeds seed 1, 3 v 6 feeds seed 2, as every
 six-team bracket since 2020 has).
+
+**Finishing odds** (the Odds tab) follow the commissioner's
+`permutations.py`: every remaining regular season game is a coin flip, every
+combination of results is played out, and each is ranked by record, the
+season's tiebreak and points for, with points frozen at what has been scored
+so far. Up to 22 remaining games are played out in full (numpy, in batches);
+more than that uses a fixed sample of 2^20 combinations. The tab exists only
+while regular season games remain, so it goes once the playoffs start. It
+reproduces the commissioner's 2025 week 14 odds exactly.
 
 **Power rankings, highest weekly and highest overall** follow the
 commissioner's `sleeper_gameweeks.py`, rounding included, and are built for
