@@ -66,11 +66,21 @@ The league moved to Sleeper in 2025. Those seasons come from Sleeper's public
 API rather than a spreadsheet, but they are converted into the same shape and
 built by the same pipeline, so the site treats all twelve seasons alike.
 
-To pull a season (or refresh one in progress):
+**This happens by itself every morning.** A GitHub Action
+(`.github/workflows/update.yml`) runs at 09:00 UTC: it fetches the latest
+data, rebuilds, runs `check.py`, and commits and pushes only if anything
+changed, which redeploys the site. It can also be run by hand from the
+repository's **Actions** tab, "Update league data", "Run workflow". A run that
+fails its checks commits nothing, and GitHub emails the repository owner.
+Mid-week, matchups still being played count as they stand, and the commit
+says "so far".
+
+To pull a season by hand (or refresh one in progress):
 
 ```
-python3 sleeper_fetch.py <league_id>
+python3 sleeper_fetch.py latest      # or a league id
 python3 build.py raw
+python3 check.py
 ```
 
 The league id is in the URL on Sleeper's site. Give it the **most recent**

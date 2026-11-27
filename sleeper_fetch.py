@@ -10,6 +10,12 @@ The league id is in the URL when you're looking at the league on the web:
 Give it the most recent season's id. Sleeper links each season to the one
 before it, so the script walks backwards and collects every season by itself.
 
+    python3 sleeper_fetch.py latest
+
+starts from the newest season already in raw/sleeper/, moving on to the next
+season's league by itself once Sleeper has one. The daily GitHub Action uses
+this.
+
 Needs nothing but Python 3 - no pip install. Writes to raw/sleeper/<season>/
 and prints what it saved. Safe to re-run; it overwrites cleanly.
 """
@@ -140,11 +146,46 @@ def referenced_player_ids(bundles):
     return ids
 
 
+def latest_league(out):
+    """The league to start from when given `latest`.
+
+    The newest season already saved, unless Sleeper's calendar has moved on
+    to a season we don't have yet; then the league that continues ours (its
+    `previous_league_id` is our newest) is looked up through the coaches'
+    Sleeper accounts in raw/sleeper_coaches.csv.
+    """
+    saved = sorted((int(p.parent.name), p) for p in out.glob("*/league.json")
+                   if p.parent.name.isdigit())
+    if not saved:
+        raise SystemExit("`latest` needs at least one season in raw/sleeper/ "
+                         "- run once with a league id first")
+    season, path = saved[-1]
+    known = json.loads(path.read_text())["league"]["league_id"]
+    state = get("state/nfl", required=False) or {}
+    current = int(state.get("league_season") or state.get("season") or season)
+    if current <= season:
+        return known
+    coaches = out.parent / "sleeper_coaches.csv"
+    users = [line.split(",")[1].strip() for line in
+             coaches.read_text().splitlines()[1:] if "," in line]
+    for uid in users:
+        for lg in get(f"user/{uid}/leagues/nfl/{current}", required=False) or []:
+            if lg.get("previous_league_id") == known:
+                print(f"New season {current}: league {lg['league_id']} "
+                      f"continues {known}")
+                return lg["league_id"]
+    print(f"Sleeper is on {current} but no league continues {known} yet; "
+          f"staying with {season}")
+    return known
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     league_id = sys.argv[1].strip()
     out = Path(sys.argv[2] if len(sys.argv) > 2 else "raw/sleeper")
+    if league_id == "latest":
+        league_id = latest_league(out)
 
     print("Walking the league history backwards from", league_id)
     bundles, seen = [], set()

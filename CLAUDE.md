@@ -81,6 +81,23 @@ Sleeper's own points-only one.
   `league.json` (weekly stats, see README); never fall back to
   `players.json`'s team where a weekly one exists. The team is display-only.
 
+## Daily updates
+
+`.github/workflows/update.yml` runs every morning at 09:00 UTC (and on
+demand from the Actions tab): `sleeper_fetch.py latest`, `build.py raw`,
+`check.py`, then commits and pushes `raw/sleeper` and `docs/data` only if
+they changed. Nobody needs to refresh the season by hand any more.
+
+- `check.py` is the CLAUDE.md checks as a script; a failure stops the run
+  before anything is committed. Run it after any pipeline change too.
+- `latest` starts from the newest season in `raw/sleeper/` and finds next
+  season's league itself (the one whose `previous_league_id` is ours).
+- Mid-week runs count matchups still being played as results, like the
+  "so far" updates did; the commit message says "so far" when Sleeper's
+  `last_scored_leg` is behind. Sleeper's own records lag the same way, so
+  `check.py` compares records only through `last_scored_leg`.
+- Pull before working locally: the bot commits to `main` most mornings.
+
 ## Adding a season
 
 ```bash
@@ -88,11 +105,12 @@ python3 sleeper_fetch.py <league_id>   # must run outside any sandbox
 python3 build.py raw
 ```
 
-`api.sleeper.app` is blocked from cloud containers and sandboxed shells, so
-the fetch has to run on a normal machine. Everything after it is automatic.
+The daily workflow does this by itself; this is for doing it by hand.
+`api.sleeper.app` is blocked from cloud containers and sandboxed shells, so a
+manual fetch has to run on a normal machine (GitHub's runners count).
 
-Give `sleeper_fetch.py` the **most recent** league id; it walks back through
-`previous_league_id` and collects every earlier Sleeper season itself.
+Give `sleeper_fetch.py` the **most recent** league id (or `latest`); it walks
+back through `previous_league_id` and collects every earlier Sleeper season.
 
 ## Working here
 

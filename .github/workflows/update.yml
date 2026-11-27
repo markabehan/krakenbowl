@@ -1,0 +1,89 @@
+# Every morning: pull the latest Sleeper data, rebuild the site's JSON, run
+# the checks, and commit and push only if something changed. Pushing to main
+# is what deploys the site, so the morning's results go live by themselves.
+#
+# Run it by hand from the repository's Actions tab ("Run workflow").
+
+name: Update league data
+
+on:
+  schedule:
+    - cron: "0 9 * * *"     # 09:00 UTC daily: 09:00 GMT, 10:00 BST
+  workflow_dispatch:
+
+permissions:
+  contents: write           # commit and push the refreshed data
+  pages: write              # ask GitHub Pages to redeploy
+
+concurrency:
+  group: update-league-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Fetch from Sleeper
+        # `latest` starts from the newest saved season and moves on to next
+        # season's league by itself once Sleeper has one.
+        run: python sleeper_fetch.py latest
+
+      - name: Build
+        run: python build.py raw
+
+      - name: Check
+        # The CLAUDE.md checks. A failure stops the run before anything is
+        # committed, and GitHub emails the repository owner.
+        run: python check.py
+
+      - name: Commit and push if anything changed
+        id: commit
+        run: |
+          git add raw/sleeper docs/data
+          if git diff --cached --quiet; then
+            echo "No changes."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          msg=$(python - <<'PY'
+          import json
+          from pathlib import Path
+          seasons = sorted(Path("docs/data").glob("season-*.json"))
+          s = json.loads(seasons[-1].read_text())
+          raw = Path("raw/sleeper") / str(s["year"]) / "league.json"
+          settings = json.loads(raw.read_text())["league"]["settings"]
+          weeks = s["regularWeeks"] + s["playoffWeeks"]
+          last = max(weeks) if weeks else 0
+          if not s.get("inProgress"):
+              print(f"Update {s['year']}: season complete")
+          elif (settings.get("last_scored_leg") or 0) < last:
+              print(f"Update {s['year']} with week {last} scores so far")
+          else:
+              print(f"Update {s['year']} through week {last}")
+          PY
+          )
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "$msg (automated)"
+          git push
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Redeploy the site
+        # A push made with the workflow's own token may not start a Pages
+        # build by itself, so request one. Harmless if one is already running.
+        if: steps.commit.outputs.pushed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
