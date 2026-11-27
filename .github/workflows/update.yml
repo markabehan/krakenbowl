@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write           # commit and push the refreshed data
-  pages: write              # ask GitHub Pages to redeploy
+  contents: write           # commit and push the refreshed data; the push
+                            # itself starts the GitHub Pages deploy
 
 concurrency:
   group: update-league-data
@@ -48,12 +48,10 @@ jobs:
         run: python check.py
 
       - name: Commit and push if anything changed
-        id: commit
         run: |
           git add raw/sleeper docs/data
           if git diff --cached --quiet; then
             echo "No changes."
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           msg=$(python - <<'PY'
@@ -77,13 +75,3 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "$msg (automated)"
           git push
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Redeploy the site
-        # A push made with the workflow's own token may not start a Pages
-        # build by itself, so request one. Harmless if one is already running.
-        if: steps.commit.outputs.pushed == 'true'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
